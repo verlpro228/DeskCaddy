@@ -64,15 +64,15 @@ and reversible.
 
 ## Installation
 
-**Grab the latest release:** [**DeskCaddy 1.0.0**](https://github.com/verlpro228/DeskCaddy/releases/latest)
-→ `DeskCaddy-1.0.0-win-x64.zip` (58 MB)
+**Grab the latest release:** [**DeskCaddy 1.0.1**](https://github.com/verlpro228/DeskCaddy/releases/latest)
+→ `DeskCaddy-1.0.1-win-x64.zip` (58 MB)
 
 1. Download the zip
 2. **Verify it** (optional, but recommended — the binary is not code-signed yet):
 
    ```powershell
    # hash of the file you downloaded
-   Get-FileHash .\DeskCaddy-1.0.0-win-x64.zip -Algorithm SHA256
+   Get-FileHash .\DeskCaddy-1.0.1-win-x64.zip -Algorithm SHA256
 
    # the checksum published with the release
    Get-Content .\SHA256SUMS.txt
@@ -174,7 +174,7 @@ The solution has three projects:
 
 ## Roadmap
 
-- [x] Portable release — [v1.0.0](https://github.com/verlpro228/DeskCaddy/releases/tag/v1.0.0) (self-contained zip + SHA-256)
+- [x] Portable release — [v1.0.1](https://github.com/verlpro228/DeskCaddy/releases/tag/v1.0.1) (self-contained zip + SHA-256)
 - [ ] Installer (Inno Setup script exists in `build/`, not yet validated end-to-end)
 - [ ] Code signing via [SignPath Foundation](https://signpath.org/)
 - [ ] Grouping in the menu panel
