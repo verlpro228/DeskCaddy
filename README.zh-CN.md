@@ -7,6 +7,8 @@
 **一条 macOS 风格的玻璃 Dock，把你的 Windows 桌面真正清理干净。**
 
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/verlpro228/DeskCaddy)](https://github.com/verlpro228/DeskCaddy/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/verlpro228/DeskCaddy/total)](https://github.com/verlpro228/DeskCaddy/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011%2022H2%2B-0078D6)](#运行环境)
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com/)
 [![Third-party packages](https://img.shields.io/badge/dependencies-0-brightgreen)](THIRD-PARTY-NOTICES.md)
@@ -50,18 +52,32 @@ DeskCaddy 会把你桌面上散落的快捷方式**真正移动**进一个托管
 ## 运行环境
 
 - Windows 11 22H2（build 22621）或更高，x64
-- [.NET 10 桌面运行时](https://dotnet.microsoft.com/download/dotnet/10.0) ——
-  或使用自包含构建（见[从源码构建](#从源码构建)）
+- 不需要装其它东西 —— 发布的版本是**自包含**的（.NET 运行时已打包）
 
 ## 安装
 
-> 首个版本发布后，预构建产物会放在 [Releases](../../releases) 页面。目前请从源码构建。
+**直接下载最新版：** [**DeskCaddy 1.0.0**](https://github.com/verlpro228/DeskCaddy/releases/latest)
+→ `DeskCaddy-1.0.0-win-x64.zip`（58 MB）
 
-1. 从 Releases 下载 `DeskCaddy.zip`，解压到任意位置
-2. 运行 `DeskCaddy.exe`
-3. 把桌面上的快捷方式拖到 Dock 上 —— 桌面立刻变干净
+1. 下载 zip
+2. **校验文件**（可选，但推荐 —— 程序尚未做代码签名）：
+
+   ```powershell
+   # 计算你下载到的文件的哈希
+   Get-FileHash .\DeskCaddy-1.0.0-win-x64.zip -Algorithm SHA256
+
+   # 与随发布附带的校验值比对
+   Get-Content .\SHA256SUMS.txt
+   ```
+
+   两者必须完全一致。
+3. 解压到任意位置，运行 `DeskCaddy.exe`
+4. 把桌面上的快捷方式拖到 Dock 上 —— 桌面立刻变干净
 
 要把所有东西还原回桌面：托盘图标 → 设置 → **全部还原**。
+
+> **SmartScreen 提示**：exe 未签名，首次运行 Windows 可能弹出警告。
+> 选择「更多信息 → 仍要运行」即可。不确定的话，先按上面的方式核对 SHA-256。
 
 ## 工作原理
 
@@ -127,7 +143,7 @@ cd src\DeskCaddy.Cli\bin\Release\net10.0-windows
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 
 ```powershell
-git clone https://github.com/<you>/DeskCaddy.git
+git clone https://github.com/verlpro228/DeskCaddy.git
 cd DeskCaddy
 dotnet build DeskCaddy.slnx -c Release
 
@@ -148,6 +164,7 @@ dotnet run --project src\DeskCaddy.Cli -- selftest 100
 
 ## 路线图
 
+- [x] 便携版发布 —— [v1.0.0](https://github.com/verlpro228/DeskCaddy/releases/tag/v1.0.0)（自包含 zip + SHA-256）
 - [ ] 安装包（Inno Setup 脚本已在 `build/`，尚未端到端验证）
 - [ ] 通过 [SignPath Foundation](https://signpath.org/) 做代码签名
 - [ ] 菜单栏分组

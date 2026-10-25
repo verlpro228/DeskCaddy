@@ -7,6 +7,8 @@
 **A macOS-style dock that truly declutters your Windows desktop.**
 
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/verlpro228/DeskCaddy)](https://github.com/verlpro228/DeskCaddy/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/verlpro228/DeskCaddy/total)](https://github.com/verlpro228/DeskCaddy/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011%2022H2%2B-0078D6)](#requirements)
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com/)
 [![Third-party packages](https://img.shields.io/badge/dependencies-0-brightgreen)](THIRD-PARTY-NOTICES.md)
@@ -58,19 +60,32 @@ and reversible.
 ## Requirements
 
 - Windows 11 22H2 (build 22621) or later, x64
-- [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) —
-  or use a self-contained build (see [Build](#building-from-source))
+- Nothing else — the published release is **self-contained** (the .NET runtime is bundled)
 
 ## Installation
 
-> Prebuilt binaries will be published on the
-> [Releases](../../releases) page once the first version ships. Until then, build from source.
+**Grab the latest release:** [**DeskCaddy 1.0.0**](https://github.com/verlpro228/DeskCaddy/releases/latest)
+→ `DeskCaddy-1.0.0-win-x64.zip` (58 MB)
 
-1. Download `DeskCaddy.zip` from Releases and extract it anywhere
-2. Run `DeskCaddy.exe`
-3. Drag shortcuts from your desktop onto the dock — your desktop is now clean
+1. Download the zip
+2. **Verify it** (optional, but recommended — the binary is not code-signed yet):
+
+   ```powershell
+   # hash of the file you downloaded
+   Get-FileHash .\DeskCaddy-1.0.0-win-x64.zip -Algorithm SHA256
+
+   # the checksum published with the release
+   Get-Content .\SHA256SUMS.txt
+   ```
+
+   The two hashes must be identical.
+3. Extract the zip anywhere you like and run `DeskCaddy.exe`
+4. Drag shortcuts from your desktop onto the dock — your desktop is now clean
 
 To restore everything back to the desktop: tray icon → settings → **Restore all**.
+
+> **SmartScreen:** the executable is unsigned, so Windows may warn on first run.
+> Choose *More info → Run anyway*. If you are not sure, check the SHA-256 first.
 
 ## How it works
 
@@ -138,7 +153,7 @@ explicitly pass `--apply`.
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 
 ```powershell
-git clone https://github.com/<you>/DeskCaddy.git
+git clone https://github.com/verlpro228/DeskCaddy.git
 cd DeskCaddy
 dotnet build DeskCaddy.slnx -c Release
 
@@ -159,6 +174,7 @@ The solution has three projects:
 
 ## Roadmap
 
+- [x] Portable release — [v1.0.0](https://github.com/verlpro228/DeskCaddy/releases/tag/v1.0.0) (self-contained zip + SHA-256)
 - [ ] Installer (Inno Setup script exists in `build/`, not yet validated end-to-end)
 - [ ] Code signing via [SignPath Foundation](https://signpath.org/)
 - [ ] Grouping in the menu panel
