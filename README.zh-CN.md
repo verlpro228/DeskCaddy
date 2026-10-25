@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="src/DeskCaddy.App/assets/app.png" alt="DeskCaddy" width="96"/>
+<img src="src/DeskCaddy.App/assets/logo.png" alt="DeskCaddy" width="96"/>
 
 # DeskCaddy
 

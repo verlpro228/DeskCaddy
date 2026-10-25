@@ -7,7 +7,7 @@
     <RootNamespace>DeskCaddy</RootNamespace>
     <AssemblyName>DeskCaddy</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>assets\app.ico</ApplicationIcon>
+    <ApplicationIcon>assets\icon.ico</ApplicationIcon>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <PublishReadyToRun>true</PublishReadyToRun>
 
@@ -33,10 +33,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- 界面里用的 Logo（由 app.ico 导出，原图已不在磁盘上）。
+    <!-- 界面里用的 Logo（512×512 透明底，由 assets\logo-source.png 缩放生成）。
          用 EmbeddedResource 而非 Resource：资源名是确定的，代码里可直接取流，
          避免 pack URI 解析失败时界面静默空白。 -->
-    <EmbeddedResource Include="assets\app.png" />
+    <EmbeddedResource Include="assets\logo.png" />
   </ItemGroup>
 
   <ItemGroup>

@@ -71,10 +71,10 @@ public partial class SettingsWindow : Window
         {
             var assembly = typeof(SettingsWindow).Assembly;
 
-            using var stream = assembly.GetManifestResourceStream("DeskCaddy.assets.app.png");
+            using var stream = assembly.GetManifestResourceStream("DeskCaddy.assets.logo.png");
             if (stream is null)
             {
-                AppLog.Error("Logo 资源缺失：DeskCaddy.assets.app.png");
+                AppLog.Error("Logo 资源缺失：DeskCaddy.assets.logo.png");
                 return null;
             }
 

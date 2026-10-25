@@ -23,9 +23,9 @@
 
 | 文件 | 来源 | 授权 |
 |---|---|---|
-| `src/DeskCaddy.App/assets/app.ico` | 项目原创设计 | 与代码分离，见 README「商标与品牌」 |
-| `src/DeskCaddy.App/assets/app.png` | 由 `DeskCaddy .png` 生成 | 同上 |
-| `src/DeskCaddy.App/assets/DeskCaddy .png` | 项目原创设计稿 | 同上 |
+| `src/DeskCaddy.App/assets/icon.ico` | 项目原创设计，七尺寸程序图标 | 与代码分离，见 README「商标与品牌」 |
+| `src/DeskCaddy.App/assets/logo.png` | 由 `logo-source.png` 缩放生成（512×512 透明底） | 同上 |
+| `src/DeskCaddy.App/assets/logo-source.png` | 项目原创设计稿 | 同上 |
 
 图标与设计稿**不适用 GPL-3.0**，保留所有权利。如果你 fork 本项目并发布改版，请替换为自己的图标。
 
