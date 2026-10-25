@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>DeskCaddy.Cli</RootNamespace>
+    <AssemblyName>DeskCaddy.Cli</AssemblyName>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DeskCaddy.Core\DeskCaddy.Core.csproj" />
+  </ItemGroup>
+
+</Project>

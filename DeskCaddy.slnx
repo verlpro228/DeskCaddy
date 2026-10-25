@@ -1,0 +1,9 @@
+<Solution>
+
+  <Folder Name="/src/">
+    <Project Path="src/DeskCaddy.Core/DeskCaddy.Core.csproj" />
+    <Project Path="src/DeskCaddy.App/DeskCaddy.App.csproj" />
+    <Project Path="src/DeskCaddy.Cli/DeskCaddy.Cli.csproj" />
+  </Folder>
+
+</Solution>

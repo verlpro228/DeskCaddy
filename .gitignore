@@ -1,0 +1,9 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+artifacts/
+
+# 内部开发日志（含本机环境信息），不公开
+docs/handoff/
