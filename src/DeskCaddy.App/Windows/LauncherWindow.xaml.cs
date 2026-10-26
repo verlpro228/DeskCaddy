@@ -20,6 +20,8 @@ public partial class LauncherWindow : Window
 {
     private const int IconRequestSize = 96;
 
+    private const int VK_LBUTTON = 0x01;
+
     private List<LauncherItem> _allItems = [];
 
     private Point _pressPoint;
@@ -46,7 +48,6 @@ public partial class LauncherWindow : Window
         // 截图前必须不可见，否则会把面板自身截进底图。
         Opacity = 0;
 
-        Loaded += OnLoaded;
         SizeChanged += OnSizeChanged;
         Deactivated += OnDeactivated;
         PreviewKeyDown += OnPreviewKeyDown;
@@ -55,8 +56,34 @@ public partial class LauncherWindow : Window
         LibraryEvents.Changed += OnLibraryChanged;
     }
 
-    private async void OnLoaded(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// 打开面板。窗口实例会被复用（关闭只是 Hide），不再每次新建：
+    /// 反复开关面板曾让内存按每次 5~9MB 线性增长，窗口树和重截的底图
+    /// 都要等很久才被回收。复用后无论开关多少次，常驻内存只有一份。
+    /// </summary>
+    public async void ShowLauncher()
     {
+        if (_closing && IsVisible)
+        {
+            return;
+        }
+
+        _closing = false;
+
+        // 上一次启动应用留下的「跳过这次失活」标记不能跨会话沿用，
+        // 否则复用窗口后的第一次点外会被白白吞掉。
+        _launchedFromPanel = false;
+
+        // 先透明再显示，避免在旧位置/旧尺寸上闪一帧。
+        Opacity = 0;
+
+        if (!IsVisible)
+        {
+            Show();
+        }
+
+        SearchBox.Clear();
+
         ApplyLayout(SettingsStore.Default.Load());
         LoadItems();
         AnchorAboveDock();
@@ -106,7 +133,16 @@ public partial class LauncherWindow : Window
 
     private void OnSizeChanged(object sender, SizeChangedEventArgs e) => UpdateClip();
 
-    private void OnLibraryChanged() => LoadItems();
+    private void OnLibraryChanged()
+    {
+        // 隐藏时不用重建视觉树；下次打开一定会重新 LoadItems。
+        if (!IsVisible)
+        {
+            return;
+        }
+
+        LoadItems();
+    }
 
     // ---------- 面板外点击检测 ----------
 
@@ -131,12 +167,15 @@ public partial class LauncherWindow : Window
 
     private void OnOutsideClickTick(object? sender, EventArgs e)
     {
-        if (_closing || _draggingOut || IsActive)
+        if (_closing || _draggingOut)
         {
             return;
         }
 
-        if (Mouse.LeftButton != MouseButtonState.Pressed)
+        // 必须用 Win32 的物理键状态：窗口复用后再次 Show 时会被激活，
+        // 而 WPF 的 Mouse.LeftButton 只跟随本进程收到的鼠标消息，点桌面时
+        // 可能一直是 Released，看起来就是「点外面关不掉」。
+        if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000) == 0)
         {
             return;
         }
@@ -157,6 +196,19 @@ public partial class LauncherWindow : Window
             return;
         }
 
+        // 点在右键菜单 / 工具提示 / Dock 等本进程的弹出窗口上，不算点面板外。
+        var hit = WindowFromPoint(cursor);
+
+        if (hit != IntPtr.Zero)
+        {
+            GetWindowThreadProcessId(hit, out var processId);
+
+            if (processId == Environment.ProcessId)
+            {
+                return;
+            }
+        }
+
         PlayCloseAnimation();
     }
 
@@ -170,13 +222,60 @@ public partial class LauncherWindow : Window
     [DllImport("user32.dll")]
     private static extern bool GetCursorPos(out Point32 point);
 
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr WindowFromPoint(Point32 point);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
     protected override void OnClosed(EventArgs e)
+    {
+        StopOutsideClickWatcher();
+
+        LibraryEvents.Changed -= OnLibraryChanged;
+
+        // 真正关闭（退出程序 / Alt+F4）时才拆掉视觉树引用。
+        Backdrop.Source = null;
+        ItemsHost.ItemsSource = null;
+        DragGhost.Source = null;
+        _viewItems = null;
+        _allItems.Clear();
+
+        MemoryTrim.Trim();
+
+        base.OnClosed(e);
+    }
+
+    /// <summary>关闭动画结束后隐藏窗口，保留实例供下次复用。</summary>
+    private void HideForReuse()
+    {
+        Hide();
+        StopOutsideClickWatcher();
+
+        // 保留窗口（省掉重建窗口的初始化开销），但拆掉内容：
+        // 51 个格子的按钮、容器与底图是常驻内存的大头，下次打开重建
+        // 只需几十毫秒（图标本身来自全局缓存）。
+        ClearSelection();
+        _viewItems = null;
+        _allItems.Clear();
+        ItemsHost.ItemsSource = null;
+        DragGhost.Source = null;
+
+        // 缓存在 ScreenBackdrop 里的位图仍是热的，下次打开同一位置会命中。
+        Backdrop.Source = null;
+
+        // 用户暂时不再交互：释放视觉树引用的位图并修剪工作集，
+        // 否则任务管理器里的占用会一直停在打开面板时的高位。
+        MemoryTrim.Trim();
+    }
+
+    private void StopOutsideClickWatcher()
     {
         _outsideClickWatcher?.Stop();
         _outsideClickWatcher = null;
-
-        LibraryEvents.Changed -= OnLibraryChanged;
-        base.OnClosed(e);
     }
 
     private void UpdateClip() =>
@@ -233,7 +332,7 @@ public partial class LauncherWindow : Window
                 {
                     Path = path,
                     Name = Path.GetFileNameWithoutExtension(item.FileName),
-                    Icon = IconLoader.LoadCached(path, item.FileName, IconRequestSize),
+                    Icon = IconLoader.LoadCached(path, IconRequestSize),
                     CellWidth = _cellWidth,
                     CellHeight = _cellHeight,
                     IconSize = _iconSize,
@@ -362,7 +461,7 @@ public partial class LauncherWindow : Window
             EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
         };
 
-        slide.Completed += (_, _) => Close();
+        slide.Completed += (_, _) => HideForReuse();
 
         RootShift.BeginAnimation(TranslateTransform.YProperty, slide);
         Root.BeginAnimation(OpacityProperty, new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(100)));

@@ -46,7 +46,7 @@ public partial class App : Application
         {
             var launcher = new LauncherWindow();
             MainWindow = launcher;
-            launcher.Show();
+            launcher.ShowLauncher();
             return;
         }
 

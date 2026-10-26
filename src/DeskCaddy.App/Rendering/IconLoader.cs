@@ -9,10 +9,11 @@ namespace DeskCaddy.Rendering;
 internal static class IconLoader
 {
     /// <summary>
-    /// 图标缓存：文件名 → (最后写入时间, 图标)。
+    /// 图标缓存：路径 + 请求尺寸 → (最后写入时间, 图标)。
     /// 必须 static——Dock 和菜单栏是两个窗口实例，实例级缓存会让菜单栏
     /// 每次打开都重新提取几十个 Shell 图标（每个 30~80ms），
     /// 表现为「点菜单按钮后卡一秒才出面板」。
+    /// 键必须带上尺寸：同一文件在 Dock / 菜单栏可能按不同尺寸请求。
     /// </summary>
     private static readonly Dictionary<string, (long Stamp, BitmapSource? Icon)> Cache =
         new(StringComparer.OrdinalIgnoreCase);
@@ -23,8 +24,10 @@ internal static class IconLoader
     /// 带缓存的提取：文件没被改过就直接复用上次结果。
     /// 线程安全；可在后台线程调用（结果已 Freeze，可跨线程交给 UI）。
     /// </summary>
-    public static BitmapSource? LoadCached(string path, string fileName, int size)
+    public static BitmapSource? LoadCached(string path, int size)
     {
+        var key = $"{path}|{size}";
+
         long stamp;
 
         try
@@ -38,7 +41,7 @@ internal static class IconLoader
 
         lock (CacheLock)
         {
-            if (Cache.TryGetValue(fileName, out var cached) && cached.Stamp == stamp)
+            if (Cache.TryGetValue(key, out var cached) && cached.Stamp == stamp)
             {
                 return cached.Icon;
             }
@@ -48,7 +51,7 @@ internal static class IconLoader
 
         lock (CacheLock)
         {
-            Cache[fileName] = (stamp, icon);
+            Cache[key] = (stamp, icon);
         }
 
         return icon;
@@ -85,36 +88,6 @@ internal static class IconLoader
             image.Width * 4);
 
         source.Freeze();
-        DumpIcon(source, Path.GetFileNameWithoutExtension(path));
         return source;
-    }
-
-    /// <summary>诊断用：把提取到的图标写到 logs/icons 下。确认图标质量问题后可删。</summary>
-    private static void DumpIcon(BitmapSource source, string name)
-    {
-        try
-        {
-            var directory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "DeskCaddy",
-                "logs",
-                "icons");
-
-            Directory.CreateDirectory(directory);
-
-            foreach (var invalid in Path.GetInvalidFileNameChars())
-            {
-                name = name.Replace(invalid, '_');
-            }
-
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(source));
-
-            using var stream = File.Create(Path.Combine(directory, $"{name}.png"));
-            encoder.Save(stream);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-        }
     }
 }

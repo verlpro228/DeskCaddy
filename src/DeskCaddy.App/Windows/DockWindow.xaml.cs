@@ -138,6 +138,12 @@ public partial class DockWindow : Window
         PlaceAboveDesktop();
         StartDesktopWatcher();
         _ = LoadIconsAsync();
+
+        // 启动序列（图标 + 底图 + 首帧渲染）结束后修剪一次工作集，
+        // 把 WPF 预热产生的驻留页交还给系统。
+        Dispatcher.BeginInvoke(
+            () => MemoryTrim.Trim(),
+            DispatcherPriority.ApplicationIdle);
     }
 
     /// <summary>把设置应用到 Dock 并重新排布。</summary>
@@ -175,6 +181,10 @@ public partial class DockWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        // 面板复用后被 Hide 起来，退出时要显式关掉，让它走完整的清理路径。
+        _launcher?.Close();
+        _launcher = null;
+
         _tray?.Dispose();
         _tray = null;
 
@@ -255,7 +265,7 @@ public partial class DockWindow : Window
                         {
                             Path = path,
                             DisplayName = Path.GetFileNameWithoutExtension(item.FileName),
-                            Icon = IconLoader.Load(path, IconRequestSize)
+                            Icon = IconLoader.LoadCached(path, IconRequestSize)
                         };
                     })
                     .ToList();
@@ -268,7 +278,7 @@ public partial class DockWindow : Window
                 {
                     Path = path,
                     DisplayName = Path.GetFileNameWithoutExtension(path),
-                    Icon = IconLoader.Load(path, IconRequestSize)
+                    Icon = IconLoader.LoadCached(path, IconRequestSize)
                 })
                 .ToList();
 
@@ -499,9 +509,25 @@ public partial class DockWindow : Window
             return;
         }
 
-        _launcher = new LauncherWindow();
-        _launcher.Closed += (_, _) => _launcher = null;
-        _launcher.Show();
+        // 面板只创建一次，关闭走 Hide，反复开关不会累积窗口树与底图。
+        if (_launcher is null)
+        {
+            var launcher = new LauncherWindow();
+
+            // 真的被关掉（Alt+F4 / 程序退出）时才丢弃实例；
+            // 不能用字段直接置空，否则下一次打开会连新窗口一起丢掉。
+            launcher.Closed += (sender, _) =>
+            {
+                if (ReferenceEquals(_launcher, sender))
+                {
+                    _launcher = null;
+                }
+            };
+
+            _launcher = launcher;
+        }
+
+        _launcher.ShowLauncher();
     }
 
     private void ShowSettings()
@@ -704,7 +730,6 @@ public partial class DockWindow : Window
                 {
                     IconLoader.LoadCached(
                         Path.Combine(service.CollectedDirectory, item.FileName),
-                        item.FileName,
                         IconRequestSize);
                 }
             }
