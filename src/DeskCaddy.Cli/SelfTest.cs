@@ -108,14 +108,19 @@ internal static class SelfTest
         // ---------- 阶段 4：索引重建 ----------
         // 用全新的状态文件模拟「索引丢失」，避免与上一阶段残留句柄纠缠。
         var orphanStateFile = Path.Combine(root, "state-orphan.json");
-        var soloFile = Path.Combine(collected, "orphan.lnk");
-        File.WriteAllText(soloFile, "orphan");
+        File.WriteAllText(Path.Combine(collected, "orphan.lnk"), "orphan");
+
+        // 拖入模式允许收纳真实文件，Reconcile 必须把它们一起恢复，
+        // 否则文件会留在收纳库目录却在 Dock / 菜单栏里消失。
+        File.WriteAllText(Path.Combine(collected, "orphan-report.docx"), "real file");
+        Directory.CreateDirectory(Path.Combine(collected, "orphan-folder"));
+
         var rebuilt = new CollectionService(new StateStore(orphanStateFile), desktop, collected);
         var reconcile = rebuilt.Reconcile(apply: true);
 
         Console.WriteLine($"[重建] 补入 {reconcile.Added.Count}，移除 {reconcile.Removed.Count}");
-        Expect(reconcile.Added.Count == 1 && rebuilt.Items.Count == 1,
-            "索引重建未能从目录恢复条目", failures);
+        Expect(reconcile.Added.Count == 3 && rebuilt.Items.Count == 3,
+            "索引重建未能从目录恢复全部条目（快捷方式 / 普通文件 / 文件夹）", failures);
 
         // ---------- 结论 ----------
         Console.WriteLine();

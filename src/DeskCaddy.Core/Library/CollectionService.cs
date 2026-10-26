@@ -158,10 +158,11 @@ public sealed class CollectionService
     {
         Directory.CreateDirectory(_collectedDirectory);
 
-        // 文件只认快捷方式（手动放进来的其他文件不算），文件夹全部纳入——
-        // 否则拖入的文件夹会被 Reconcile 当成「索引缺失」清掉。
+        // 文件与文件夹全部纳入：拖入模式允许收纳真实文件，Reconcile 若只认
+        // 快捷方式，会把它们当成「索引缺失」从 state.json 里清掉——文件还在
+        // 收纳库目录，但 Dock / 菜单栏不再显示（文件夹因为被单独枚举而幸免）。
+        // 桌面扫描与 collect-all 仍然只认快捷方式，不受这里影响。
         var files = Directory.EnumerateFiles(_collectedDirectory)
-            .Where(IsLibraryFile)
             .Select(Path.GetFileName)
             .OfType<string>()
             .Concat(Directory.EnumerateDirectories(_collectedDirectory)
@@ -202,14 +203,6 @@ public sealed class CollectionService
         Save();
 
         return new ReconcileResult(added, removed);
-    }
-
-    private static bool IsLibraryFile(string path)
-    {
-        var extension = Path.GetExtension(path);
-
-        return extension.Equals(".lnk", StringComparison.OrdinalIgnoreCase)
-            || extension.Equals(".url", StringComparison.OrdinalIgnoreCase);
     }
 
     private CollectedItem? FindItem(string fileName) =>
