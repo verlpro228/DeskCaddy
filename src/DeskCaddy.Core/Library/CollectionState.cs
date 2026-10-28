@@ -39,5 +39,11 @@ public sealed class CollectionState
 
     public List<CollectedItem> Items { get; set; } = [];
 
+    /// <summary>
+    /// 菜单栏分组名。条目通过 <see cref="CollectedItem.Group"/> 指向这里；
+    /// 分组独立保存，空分组才不会因为「里面没有条目」而消失。
+    /// </summary>
+    public List<string> Groups { get; set; } = [];
+
     public UiSettings Ui { get; set; } = new();
 }

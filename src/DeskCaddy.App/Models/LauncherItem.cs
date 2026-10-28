@@ -11,6 +11,9 @@ public sealed class LauncherItem : INotifyPropertyChanged
 
     public required string Name { get; init; }
 
+    /// <summary>所属分组名；空字符串表示未分组。</summary>
+    public string Group { get; init; } = string.Empty;
+
     public BitmapSource? Icon { get; init; }
 
     public double CellWidth { get; init; } = 118;

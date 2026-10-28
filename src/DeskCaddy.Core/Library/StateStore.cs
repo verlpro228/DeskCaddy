@@ -143,6 +143,7 @@ public sealed class StateStore
         }
 
         state.Items ??= [];
+        state.Groups ??= [];
 
         return state;
     }

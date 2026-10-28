@@ -183,7 +183,7 @@ The solution has three projects:
 - [x] Portable release — [v1.0.2](https://github.com/verlpro228/DeskCaddy/releases/tag/v1.0.2) (self-contained zip + SHA-256)
 - [x] Installer — per-user Inno Setup build (install/uninstall validated; code signing still pending)
 - [ ] Code signing via [SignPath Foundation](https://signpath.org/)
-- [ ] Grouping in the menu panel
+- [x] Grouping in the menu panel — filter chips + right-click assignment
 - [ ] First-run wizard (scan desktop → propose what to collect)
 - [ ] Mixed-DPI multi-monitor positioning
 

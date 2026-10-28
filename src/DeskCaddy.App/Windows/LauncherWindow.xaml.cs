@@ -24,6 +24,14 @@ public partial class LauncherWindow : Window
 
     private List<LauncherItem> _allItems = [];
 
+    /// <summary>当前分组筛选；null = 全部，空字符串 = 未分组。</summary>
+    private string? _groupFilter;
+
+    private List<string> _groups = [];
+
+    /// <summary>新建分组对话框打开期间，不要因为失活/点外把面板收起来。</summary>
+    private bool _dialogOpen;
+
     private Point _pressPoint;
     private LauncherItem? _pressedItem;
     private LauncherItem? _selectedItem;
@@ -73,6 +81,7 @@ public partial class LauncherWindow : Window
         // 上一次启动应用留下的「跳过这次失活」标记不能跨会话沿用，
         // 否则复用窗口后的第一次点外会被白白吞掉。
         _launchedFromPanel = false;
+        _groupFilter = null;
 
         // 先透明再显示，避免在旧位置/旧尺寸上闪一帧。
         Opacity = 0;
@@ -114,7 +123,7 @@ public partial class LauncherWindow : Window
     /// </summary>
     private void OnDeactivated(object? sender, EventArgs e)
     {
-        if (_draggingOut)
+        if (_dialogOpen || _draggingOut)
         {
             return;
         }
@@ -167,7 +176,7 @@ public partial class LauncherWindow : Window
 
     private void OnOutsideClickTick(object? sender, EventArgs e)
     {
-        if (_closing || _draggingOut)
+        if (_closing || _draggingOut || _dialogOpen)
         {
             return;
         }
@@ -241,8 +250,12 @@ public partial class LauncherWindow : Window
         Backdrop.Source = null;
         ItemsHost.ItemsSource = null;
         DragGhost.Source = null;
+        GroupChips.Children.Clear();
         _viewItems = null;
         _allItems.Clear();
+        _groups.Clear();
+        _groupFilter = null;
+        _dialogOpen = false;
 
         MemoryTrim.Trim();
 
@@ -263,6 +276,9 @@ public partial class LauncherWindow : Window
         _allItems.Clear();
         ItemsHost.ItemsSource = null;
         DragGhost.Source = null;
+        GroupChips.Children.Clear();
+        _groups.Clear();
+        _groupFilter = null;
 
         // 缓存在 ScreenBackdrop 里的位图仍是热的，下次打开同一位置会命中。
         Backdrop.Source = null;
@@ -332,6 +348,7 @@ public partial class LauncherWindow : Window
                 {
                     Path = path,
                     Name = Path.GetFileNameWithoutExtension(item.FileName),
+                    Group = item.Group ?? string.Empty,
                     Icon = IconLoader.LoadCached(path, IconRequestSize),
                     CellWidth = _cellWidth,
                     CellHeight = _cellHeight,
@@ -340,6 +357,26 @@ public partial class LauncherWindow : Window
                 };
             })
             .ToList();
+
+        // 分组以 state.json 为准；顺手把「条目有分组但 Groups 里没有」的旧数据补上。
+        _groups = service.Groups.ToList();
+
+        foreach (var item in _allItems)
+        {
+            if (item.Group.Length > 0
+                && !_groups.Any(g => string.Equals(g, item.Group, StringComparison.OrdinalIgnoreCase)))
+            {
+                _groups.Add(item.Group);
+            }
+        }
+
+        if (_groupFilter is { Length: > 0 }
+            && !_groups.Any(g => string.Equals(g, _groupFilter, StringComparison.OrdinalIgnoreCase)))
+        {
+            _groupFilter = null;
+        }
+
+        RefreshGroupChips();
 
         // 保留当前搜索词：右键菜单执行后重载时不该把用户的输入清掉。
         ApplyFilter(SearchBox.Text);
@@ -407,9 +444,18 @@ public partial class LauncherWindow : Window
     {
         var keyword = query.Trim();
 
+        IEnumerable<LauncherItem> scope = _allItems;
+
+        if (_groupFilter is not null)
+        {
+            scope = _groupFilter.Length == 0
+                ? _allItems.Where(i => i.Group.Length == 0)
+                : _allItems.Where(i => string.Equals(i.Group, _groupFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
         var filtered = keyword.Length == 0
-            ? _allItems
-            : _allItems
+            ? scope.ToList()
+            : scope
                 .Where(i => i.Name.Contains(keyword, StringComparison.CurrentCultureIgnoreCase))
                 .ToList();
 
@@ -418,9 +464,278 @@ public partial class LauncherWindow : Window
         _viewItems = new ObservableCollection<LauncherItem>(filtered);
         ItemsHost.ItemsSource = _viewItems;
 
-        EmptyHint.Visibility = filtered.Count == 0 && _allItems.Count > 0
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        // 切换分组/搜索词后回到顶部：否则滚动位置还停在上一组的下方，
+        // 新结果会落在视口外，看起来像「这个分组是空的」。
+        ItemsScroll.ScrollToTop();
+
+        if (filtered.Count == 0 && _allItems.Count > 0)
+        {
+            EmptyHint.Text = keyword.Length > 0
+                ? "没有匹配的应用"
+                : _groupFilter is null ? "没有可显示的应用" : "这个分组还没有条目";
+            EmptyHint.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            EmptyHint.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    // ---------- 分组 ----------
+
+    private void RefreshGroupChips()
+    {
+        GroupChips.Children.Clear();
+
+        AddGroupChip("全部", null);
+        AddGroupChip("未分组", string.Empty);
+
+        foreach (var group in _groups)
+        {
+            AddGroupChip(group, group);
+        }
+
+        var add = new Button
+        {
+            Content = "＋",
+            Style = (Style)FindResource("GroupChipButton"),
+            ToolTip = "新建分组"
+        };
+
+        add.Click += (_, _) => CreateGroupPrompt();
+        GroupChips.Children.Add(add);
+    }
+
+    private void AddGroupChip(string label, string? filter)
+    {
+        var chip = new RadioButton
+        {
+            Content = label,
+            Style = (Style)FindResource("GroupChip"),
+            GroupName = "LauncherGroups",
+            Tag = filter,
+            IsChecked = filter is null
+                ? _groupFilter is null
+                : string.Equals(filter, _groupFilter, StringComparison.Ordinal)
+        };
+
+        // 用 Checked 覆盖鼠标、键盘和辅助工具（UIA Select）三条路径；
+        // 重建时设置 IsChecked 会多跑一次 ApplyFilter，但结果一致。
+        chip.Checked += (sender, _) =>
+        {
+            _groupFilter = (sender as RadioButton)?.Tag as string;
+            ApplyFilter(SearchBox.Text);
+        };
+
+        if (!string.IsNullOrEmpty(filter))
+        {
+            var menu = new ContextMenu();
+            menu.Items.Add(CreateMenuItem("重命名…", () => RenameGroupPrompt(filter)));
+            menu.Items.Add(CreateMenuItem("删除分组", () => DeleteGroupPrompt(filter)));
+            chip.ContextMenu = menu;
+        }
+
+        GroupChips.Children.Add(chip);
+    }
+
+    private async void CreateGroupPrompt(LauncherItem? item = null)
+    {
+        if (_dialogOpen)
+        {
+            return;
+        }
+
+        _dialogOpen = true;
+
+        try
+        {
+            var dialog = new GroupNameWindow { Owner = this };
+
+            if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.GroupName))
+            {
+                return;
+            }
+
+            var name = dialog.GroupName.Trim();
+
+            var (result, canonical) = await Task.Run(() =>
+            {
+                var service = CollectionService.CreateDefault();
+                var created = service.CreateGroup(name);
+
+                var actual = service.Groups.FirstOrDefault(g =>
+                    string.Equals(g, name, StringComparison.OrdinalIgnoreCase)) ?? name;
+
+                if (item is not null)
+                {
+                    service.SetGroup(Path.GetFileName(item.Path), actual);
+                }
+
+                return (created, actual);
+            });
+
+            AppLog.Info(result.Message);
+
+            if (item is null)
+            {
+                _groupFilter = canonical;
+            }
+
+            LoadItems();
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("create group failed", ex);
+        }
+        finally
+        {
+            _dialogOpen = false;
+        }
+    }
+
+    private async void RenameGroupPrompt(string oldName)
+    {
+        if (_dialogOpen)
+        {
+            return;
+        }
+
+        _dialogOpen = true;
+
+        try
+        {
+            var dialog = new GroupNameWindow("重命名分组", oldName) { Owner = this };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            var newName = dialog.GroupName.Trim();
+
+            if (string.Equals(newName, oldName, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            var result = await Task.Run(() =>
+                CollectionService.CreateDefault().RenameGroup(oldName, newName));
+
+            AppLog.Info(result.Message);
+
+            if (!result.Success)
+            {
+                MessageBox.Show(result.Message, "重命名分组", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.Equals(_groupFilter, oldName, StringComparison.OrdinalIgnoreCase))
+            {
+                _groupFilter = newName;
+            }
+
+            LoadItems();
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("rename group failed", ex);
+        }
+        finally
+        {
+            _dialogOpen = false;
+        }
+    }
+
+    private async void DeleteGroupPrompt(string groupName)
+    {
+        if (_dialogOpen)
+        {
+            return;
+        }
+
+        _dialogOpen = true;
+
+        try
+        {
+            var count = _allItems.Count(i =>
+                string.Equals(i.Group, groupName, StringComparison.OrdinalIgnoreCase));
+
+            var answer = MessageBox.Show(
+                $"删除分组「{groupName}」？{Environment.NewLine}{Environment.NewLine}" +
+                $"组内 {count} 个条目会回到「未分组」。",
+                "删除分组",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (answer != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            var result = await Task.Run(() =>
+                CollectionService.CreateDefault().DeleteGroup(groupName));
+
+            AppLog.Info(result.Message);
+
+            if (!result.Success)
+            {
+                MessageBox.Show(result.Message, "删除分组", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.Equals(_groupFilter, groupName, StringComparison.OrdinalIgnoreCase))
+            {
+                _groupFilter = null;
+            }
+
+            LoadItems();
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("delete group failed", ex);
+        }
+        finally
+        {
+            _dialogOpen = false;
+        }
+    }
+
+    private async void AssignGroup(LauncherItem item, string? group)
+    {
+        var fileName = Path.GetFileName(item.Path);
+
+        var result = await Task.Run(() =>
+            CollectionService.CreateDefault().SetGroup(fileName, group));
+
+        AppLog.Info(result.Message);
+        LoadItems();
+    }
+
+    private MenuItem BuildGroupSubmenu(LauncherItem item)
+    {
+        var root = new MenuItem { Header = "移动到分组" };
+
+        foreach (var group in _groups)
+        {
+            var entry = CreateMenuItem(group, () => AssignGroup(item, group));
+            entry.IsCheckable = true;
+            entry.IsChecked = string.Equals(item.Group, group, StringComparison.OrdinalIgnoreCase);
+            root.Items.Add(entry);
+        }
+
+        if (_groups.Count > 0)
+        {
+            root.Items.Add(new Separator());
+        }
+
+        var ungrouped = CreateMenuItem("未分组", () => AssignGroup(item, null));
+        ungrouped.IsCheckable = true;
+        ungrouped.IsChecked = item.Group.Length == 0;
+        root.Items.Add(ungrouped);
+        root.Items.Add(new Separator());
+        root.Items.Add(CreateMenuItem("新建分组…", () => CreateGroupPrompt(item)));
+
+        return root;
     }
 
     /// <summary>打开动画：面板从 Dock 方向滑入并淡入。</summary>
@@ -573,7 +888,11 @@ public partial class LauncherWindow : Window
         }
     }
 
-    /// <summary>右键弹出资源管理器原生菜单（与桌面右键完全一致）。</summary>
+    /// <summary>
+    /// 右键菜单：打开 / 移动到分组 / 定位。
+    /// 文件的资源管理器原生菜单收在「系统菜单…」里；文件夹禁用原生菜单
+    /// （会加载大量 shell 扩展，实测卡死并崩掉进程）。
+    /// </summary>
     private void OnTileRightClick(object sender, MouseButtonEventArgs e)
     {
         if ((sender as FrameworkElement)?.Tag is not LauncherItem item)
@@ -583,14 +902,37 @@ public partial class LauncherWindow : Window
 
         e.Handled = true;
 
-        // 文件夹走轻量自定义菜单：文件夹的原生 Shell 菜单会加载大量
-        // 针对文件夹的 shell 扩展，实测卡死并崩掉整个进程（lnk/exe 无此问题）。
-        if (Directory.Exists(item.Path))
+        var menu = BuildTileMenu(item);
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+        menu.IsOpen = true;
+    }
+
+    private ContextMenu BuildTileMenu(LauncherItem item)
+    {
+        var isFolder = Directory.Exists(item.Path);
+        var menu = new ContextMenu();
+
+        menu.Items.Add(CreateMenuItem("打开", () => ActivateItem(item)));
+        menu.Items.Add(BuildGroupSubmenu(item));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(CreateMenuItem("在文件夹中显示", () => RevealInExplorer(item.Path)));
+
+        if (isFolder)
         {
-            ShowFolderMenu(item);
-            return;
+            menu.Items.Add(CreateMenuItem("还原到桌面", () => RestoreItemToDesktop(item)));
+        }
+        else
+        {
+            menu.Items.Add(new Separator());
+            menu.Items.Add(CreateMenuItem("系统菜单…", () => ShowNativeMenu(item)));
         }
 
+        return menu;
+    }
+
+    /// <summary>文件的原生资源管理器菜单。只对文件开放，文件夹会崩。</summary>
+    private void ShowNativeMenu(LauncherItem item)
+    {
         var before = SnapshotLibrary();
 
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
@@ -606,19 +948,6 @@ public partial class LauncherWindow : Window
         {
             _ = RefreshAfterContextMenuAsync();
         }
-    }
-
-    /// <summary>文件夹的右键菜单：只提供三个高频操作，不碰原生 Shell 菜单。</summary>
-    private void ShowFolderMenu(LauncherItem item)
-    {
-        var menu = new ContextMenu { Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint };
-
-        menu.Items.Add(CreateMenuItem("打开", () => ActivateItem(item)));
-        menu.Items.Add(CreateMenuItem("还原到桌面", () => RestoreItemToDesktop(item)));
-        menu.Items.Add(new System.Windows.Controls.Separator());
-        menu.Items.Add(CreateMenuItem("在文件夹中显示", () => RevealInExplorer(item.Path)));
-
-        menu.IsOpen = true;
     }
 
     private async void RestoreItemToDesktop(LauncherItem item)

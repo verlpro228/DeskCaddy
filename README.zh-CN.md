@@ -173,7 +173,7 @@ dotnet run --project src\DeskCaddy.Cli -- selftest 100
 - [x] 便携版发布 —— [v1.0.2](https://github.com/verlpro228/DeskCaddy/releases/tag/v1.0.2)（自包含 zip + SHA-256）
 - [x] 安装包 —— Inno Setup 按用户安装（安装/卸载已验证；签名仍待处理）
 - [ ] 通过 [SignPath Foundation](https://signpath.org/) 做代码签名
-- [ ] 菜单栏分组
+- [x] 菜单栏分组 —— 顶部分组标签 + 右键移动 / 重命名 / 删除
 - [ ] 首次运行向导（扫描桌面 → 建议收纳内容）
 - [ ] 混合 DPI 多屏定位
 

@@ -287,6 +287,152 @@ public sealed class CollectionService
         return OperationResult.Ok($"{fileName} {(pinned ? "已加入" : "已移出")} Dock");
     }
 
+    /// <summary>菜单栏分组名（独立保存，空分组也会保留）。</summary>
+    public IReadOnlyList<string> Groups => _state.Groups;
+
+    /// <summary>新建一个空分组。已存在（忽略大小写）时返回成功并提示。</summary>
+    public OperationResult CreateGroup(string name)
+    {
+        var normalized = NormalizeGroupName(name);
+        if (normalized is null)
+        {
+            return OperationResult.Fail("分组名不能为空，且不能超过 20 个字符");
+        }
+
+        var existing = _state.Groups.FirstOrDefault(g =>
+            string.Equals(g, normalized, StringComparison.OrdinalIgnoreCase));
+
+        if (existing is not null)
+        {
+            return OperationResult.Ok($"分组已存在：{existing}");
+        }
+
+        _state.Groups.Add(normalized);
+        Save();
+
+        return OperationResult.Ok($"已创建分组「{normalized}」");
+    }
+
+    /// <summary>
+    /// 把条目移动到某个分组；group 为空表示移出分组。
+    /// 只改索引，不动任何文件。
+    /// </summary>
+    public OperationResult SetGroup(string fileName, string? group)
+    {
+        var item = FindItem(fileName);
+        if (item is null)
+        {
+            return OperationResult.Fail($"收纳库中没有该条目：{fileName}");
+        }
+
+        var normalized = NormalizeGroupName(group);
+
+        if (!string.IsNullOrWhiteSpace(group) && normalized is null)
+        {
+            return OperationResult.Fail("分组名不能超过 20 个字符");
+        }
+
+        if (normalized is not null)
+        {
+            var existing = _state.Groups.FirstOrDefault(g =>
+                string.Equals(g, normalized, StringComparison.OrdinalIgnoreCase));
+
+            if (existing is null)
+            {
+                _state.Groups.Add(normalized);
+            }
+            else
+            {
+                normalized = existing;
+            }
+        }
+
+        item.Group = normalized;
+        Save();
+
+        return OperationResult.Ok(normalized is null
+            ? $"{fileName} 已移出分组"
+            : $"{fileName} → 分组「{normalized}」");
+    }
+
+    /// <summary>删除分组；组内条目回到未分组。只改索引。</summary>
+    public OperationResult DeleteGroup(string name)
+    {
+        var group = _state.Groups.FirstOrDefault(g =>
+            string.Equals(g, (name ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase));
+
+        if (group is null)
+        {
+            return OperationResult.Fail($"没有这个分组：{name}");
+        }
+
+        foreach (var item in _state.Items.Where(i =>
+                     string.Equals(i.Group, group, StringComparison.OrdinalIgnoreCase)))
+        {
+            item.Group = null;
+        }
+
+        _state.Groups.Remove(group);
+        Save();
+
+        return OperationResult.Ok($"已删除分组「{group}」，组内条目回到未分组");
+    }
+
+    /// <summary>重命名分组，组内条目同步改名。只改索引。</summary>
+    public OperationResult RenameGroup(string oldName, string newName)
+    {
+        var oldGroup = _state.Groups.FirstOrDefault(g =>
+            string.Equals(g, (oldName ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase));
+
+        if (oldGroup is null)
+        {
+            return OperationResult.Fail($"没有这个分组：{oldName}");
+        }
+
+        var normalized = NormalizeGroupName(newName);
+        if (normalized is null)
+        {
+            return OperationResult.Fail("分组名不能为空，且不能超过 20 个字符");
+        }
+
+        if (string.Equals(oldGroup, normalized, StringComparison.Ordinal))
+        {
+            return OperationResult.Ok($"分组名未变：{oldGroup}");
+        }
+
+        if (_state.Groups.Any(g =>
+                !string.Equals(g, oldGroup, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(g, normalized, StringComparison.OrdinalIgnoreCase)))
+        {
+            return OperationResult.Fail($"已存在同名分组：{normalized}");
+        }
+
+        var index = _state.Groups.IndexOf(oldGroup);
+        _state.Groups[index] = normalized;
+
+        foreach (var item in _state.Items.Where(i =>
+                     string.Equals(i.Group, oldGroup, StringComparison.OrdinalIgnoreCase)))
+        {
+            item.Group = normalized;
+        }
+
+        Save();
+
+        return OperationResult.Ok($"分组「{oldGroup}」已重命名为「{normalized}」");
+    }
+
+    private static string? NormalizeGroupName(string? name)
+    {
+        var trimmed = (name ?? string.Empty).Trim();
+
+        if (trimmed.Length is 0 or > 20 || trimmed.Any(char.IsControl))
+        {
+            return null;
+        }
+
+        return trimmed;
+    }
+
     /// <summary>
     /// 把条目移到指定位置（从 0 开始）。只改索引顺序，不动任何文件。
     /// 重排全部 Sort 值，避免间隔耗尽。

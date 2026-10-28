@@ -48,6 +48,12 @@ internal static class Program
                 "restore" => Restore(service, positional, apply),
                 "restore-all" => RestoreAll(service, apply),
                 "reconcile" => Reconcile(service, apply),
+                "groups" => Groups(service),
+                "group" => SetGroup(service, positional),
+                "ungroup" => Ungroup(service, positional),
+                "group-create" => CreateGroup(service, positional),
+                "group-delete" => DeleteGroup(service, positional),
+                "group-rename" => RenameGroup(service, positional),
                 "ctxmenu" => CtxMenuProbe(positional),
                 "icon" => IconProbe(positional),
                 "target" => TargetProbe(positional),
@@ -304,6 +310,94 @@ internal static class Program
         return 0;
     }
 
+    private static int Groups(CollectionService service)
+    {
+        Console.WriteLine($"分组数：{service.Groups.Count}");
+
+        foreach (var group in service.Groups)
+        {
+            var count = service.Items.Count(i =>
+                string.Equals(i.Group, group, StringComparison.OrdinalIgnoreCase));
+
+            Console.WriteLine($"  · {group}（{count} 项）");
+        }
+
+        var ungrouped = service.Items.Count(i => string.IsNullOrWhiteSpace(i.Group));
+        Console.WriteLine($"未分组：{ungrouped} 项");
+
+        return 0;
+    }
+
+    private static int SetGroup(CollectionService service, IReadOnlyList<string> positional)
+    {
+        if (positional.Count < 2)
+        {
+            Console.WriteLine("用法：group <收纳库文件名> <分组名>");
+            return 1;
+        }
+
+        var result = service.SetGroup(positional[0], positional[1]);
+        Console.WriteLine(result.Message);
+
+        return result.Success ? 0 : 2;
+    }
+
+    private static int Ungroup(CollectionService service, IReadOnlyList<string> positional)
+    {
+        if (positional.Count == 0)
+        {
+            Console.WriteLine("用法：ungroup <收纳库文件名>");
+            return 1;
+        }
+
+        var result = service.SetGroup(positional[0], null);
+        Console.WriteLine(result.Message);
+
+        return result.Success ? 0 : 2;
+    }
+
+    private static int CreateGroup(CollectionService service, IReadOnlyList<string> positional)
+    {
+        if (positional.Count == 0)
+        {
+            Console.WriteLine("用法：group-create <分组名>");
+            return 1;
+        }
+
+        var result = service.CreateGroup(positional[0]);
+        Console.WriteLine(result.Message);
+
+        return result.Success ? 0 : 2;
+    }
+
+    private static int DeleteGroup(CollectionService service, IReadOnlyList<string> positional)
+    {
+        if (positional.Count == 0)
+        {
+            Console.WriteLine("用法：group-delete <分组名>");
+            return 1;
+        }
+
+        var result = service.DeleteGroup(positional[0]);
+        Console.WriteLine(result.Message);
+
+        return result.Success ? 0 : 2;
+    }
+
+    private static int RenameGroup(CollectionService service, IReadOnlyList<string> positional)
+    {
+        if (positional.Count < 2)
+        {
+            Console.WriteLine("用法：group-rename <旧分组名> <新分组名>");
+            return 1;
+        }
+
+        var result = service.RenameGroup(positional[0], positional[1]);
+        Console.WriteLine(result.Message);
+
+        return result.Success ? 0 : 2;
+    }
+
     private static int Unknown(string command)
     {
         Console.WriteLine($"未知命令：{command}");
@@ -323,6 +417,12 @@ internal static class Program
         Console.WriteLine("  restore <文件名> [--apply] 还原单个条目（默认预演）");
         Console.WriteLine("  restore-all [--apply]     还原全部（默认预演）");
         Console.WriteLine("  reconcile [--apply]       对齐索引与收纳库目录（默认预演）");
+        Console.WriteLine("  groups                    列出菜单栏分组与各分组条目数");
+        Console.WriteLine("  group <文件名> <分组名>   把条目移动到分组（分组不存在会自动创建）");
+        Console.WriteLine("  ungroup <文件名>          把条目移出分组");
+        Console.WriteLine("  group-create <分组名>     新建空分组");
+        Console.WriteLine("  group-delete <分组名>     删除分组，组内条目回到未分组");
+        Console.WriteLine("  group-rename <旧> <新>    重命名分组");
         Console.WriteLine("  selftest [数量]           在临时目录跑「全收纳 → 全还原」验收（默认 100 个）");
         Console.WriteLine();
         Console.WriteLine("所有写操作默认都是预演，必须显式加 --apply。");
