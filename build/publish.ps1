@@ -74,15 +74,17 @@ if ($SkipInstaller) {
     return
 }
 
-# 找 Inno Setup 编译器
-$isccCandidates = @(
+# 找 Inno Setup 编译器（兼容按用户安装到 %LocalAppData% 的情况）
+$isccCandidates = @(@(
+    "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
+    "$env:LOCALAPPDATA\Programs\Inno Setup 7\ISCC.exe",
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
     "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
     "${env:ProgramFiles(x86)}\Inno Setup 7\ISCC.exe",
     "$env:ProgramFiles\Inno Setup 7\ISCC.exe"
-) | Where-Object { Test-Path $_ }
+) | Where-Object { Test-Path $_ })
 
-if (-not $isccCandidates) {
+if ($isccCandidates.Count -eq 0) {
     Write-Warning '未找到 ISCC.exe（Inno Setup）。安装后可重新运行本脚本生成安装包。'
     Write-Warning '下载：https://jrsoftware.org/isdl.php'
     return
@@ -91,8 +93,11 @@ if (-not $isccCandidates) {
 $iscc = $isccCandidates[0]
 $script = Join-Path $PSScriptRoot 'DeskCaddy.iss'
 
-Write-Host "打包安装程序：$iscc" -ForegroundColor Cyan
-& $iscc $script
+# 安装包版本必须跟 csproj 一致，避免手改 .iss 时漏掉
+$version = (Select-String -Path $project -Pattern '<Version>([^<]+)</Version>').Matches.Groups[1].Value
+
+Write-Host "打包安装程序：$iscc（版本 $version）" -ForegroundColor Cyan
+& $iscc "/DAppVersion=$version" $script
 
 if ($LASTEXITCODE -ne 0) {
     throw "ISCC 失败，退出码 $LASTEXITCODE"

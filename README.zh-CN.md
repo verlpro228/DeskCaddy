@@ -57,13 +57,19 @@ DeskCaddy 会把你桌面上散落的快捷方式**真正移动**进一个托管
 ## 安装
 
 **直接下载最新版：** [**DeskCaddy 1.0.2**](https://github.com/verlpro228/DeskCaddy/releases/latest)
-→ `DeskCaddy-1.0.2-win-x64.zip`（58 MB）
 
-1. 下载 zip
+发布两种形态：
+
+- `DeskCaddy-1.0.2-setup.exe` —— 按用户安装，不弹 UAC；卸载时保留收纳库
+- `DeskCaddy-1.0.2-win-x64.zip` —— 便携版，解压即用
+
+1. 下载任意一种
 2. **校验文件**（可选，但推荐 —— 程序尚未做代码签名）：
 
    ```powershell
    # 计算你下载到的文件的哈希
+   Get-FileHash .\DeskCaddy-1.0.2-setup.exe -Algorithm SHA256
+   # 或者便携版 zip
    Get-FileHash .\DeskCaddy-1.0.2-win-x64.zip -Algorithm SHA256
 
    # 与随发布附带的校验值比对
@@ -71,7 +77,7 @@ DeskCaddy 会把你桌面上散落的快捷方式**真正移动**进一个托管
    ```
 
    两者必须完全一致。
-3. 解压到任意位置，运行 `DeskCaddy.exe`
+3. 运行安装包，或解压 zip 后运行 `DeskCaddy.exe`
 4. 把桌面上的快捷方式拖到 Dock 上 —— 桌面立刻变干净
 
 要把所有东西还原回桌面：托盘图标 → 设置 → **全部还原**。
@@ -165,7 +171,7 @@ dotnet run --project src\DeskCaddy.Cli -- selftest 100
 ## 路线图
 
 - [x] 便携版发布 —— [v1.0.2](https://github.com/verlpro228/DeskCaddy/releases/tag/v1.0.2)（自包含 zip + SHA-256）
-- [ ] 安装包（Inno Setup 脚本已在 `build/`，尚未端到端验证）
+- [x] 安装包 —— Inno Setup 按用户安装（安装/卸载已验证；签名仍待处理）
 - [ ] 通过 [SignPath Foundation](https://signpath.org/) 做代码签名
 - [ ] 菜单栏分组
 - [ ] 首次运行向导（扫描桌面 → 建议收纳内容）

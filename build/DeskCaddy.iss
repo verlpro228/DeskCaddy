@@ -7,7 +7,10 @@
 ; 4. 不打包单文件（自解压容易被杀软误判），整目录安装
 
 #define AppName        "DeskCaddy"
+; publish.ps1 会通过 /DAppVersion=<csproj 版本> 覆盖；直接编译时用下面的兜底值
+#ifndef AppVersion
 #define AppVersion     "1.0.2"
+#endif
 #define AppPublisher   "DeskCaddy"
 #define AppExeName     "DeskCaddy.exe"
 #define AppUrl         "https://github.com/verlpro228/DeskCaddy"
@@ -35,10 +38,15 @@ WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 LicenseFile=..\LICENSE
-MinVersion=10.0.22000
+MinVersion=10.0.22621
+
+; 程序运行时会持有这个互斥体；安装/卸载前提示用户先关闭，避免文件被占用
+AppMutex=DeskCaddy.SingleInstance
 
 [Languages]
-Name: "chinese"; MessagesFile: "compiler:Default.isl"
+; Default.isl 是英文向导；中文翻译（ChineseSimplified.isl）不是 Inno Setup 自带的
+; 标准文件，等安装 ISCC 后再决定是否引入，避免编译时找不到文件。
+Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: "附加任务:"; Flags: unchecked
@@ -63,7 +71,7 @@ Filename: "{app}\{#AppExeName}"; Description: "启动 {#AppName}"; Flags: nowait
 
 [UninstallRun]
 ; 结束正在运行的进程，否则卸载时会提示文件占用
-Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM {#AppExeName}"; Flags: runhidden skipifdoesntexist
+Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM {#AppExeName}"; Flags: runhidden skipifdoesntexist; RunOnceId: "KillDeskCaddy"
 
 [Code]
 // 卸载前提醒：收纳库与配置不会随卸载删除

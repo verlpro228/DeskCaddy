@@ -65,21 +65,27 @@ and reversible.
 ## Installation
 
 **Grab the latest release:** [**DeskCaddy 1.0.2**](https://github.com/verlpro228/DeskCaddy/releases/latest)
-→ `DeskCaddy-1.0.2-win-x64.zip` (58 MB)
 
-1. Download the zip
-2. **Verify it** (optional, but recommended — the binary is not code-signed yet):
+Two builds are published:
+
+- `DeskCaddy-1.0.2-setup.exe` — per-user installer, no admin prompt; uninstalling keeps your collected library
+- `DeskCaddy-1.0.2-win-x64.zip` — portable, extract and run
+
+1. Download either build
+2. **Verify it** (optional, but recommended — the binaries are not code-signed yet):
 
    ```powershell
    # hash of the file you downloaded
+   Get-FileHash .\DeskCaddy-1.0.2-setup.exe -Algorithm SHA256
+   # or the portable zip
    Get-FileHash .\DeskCaddy-1.0.2-win-x64.zip -Algorithm SHA256
 
-   # the checksum published with the release
+   # the checksums published with the release
    Get-Content .\SHA256SUMS.txt
    ```
 
-   The two hashes must be identical.
-3. Extract the zip anywhere you like and run `DeskCaddy.exe`
+   The hashes must be identical.
+3. Run the installer, or extract the zip and run `DeskCaddy.exe`
 4. Drag shortcuts from your desktop onto the dock — your desktop is now clean
 
 To restore everything back to the desktop: tray icon → settings → **Restore all**.
@@ -175,7 +181,7 @@ The solution has three projects:
 ## Roadmap
 
 - [x] Portable release — [v1.0.2](https://github.com/verlpro228/DeskCaddy/releases/tag/v1.0.2) (self-contained zip + SHA-256)
-- [ ] Installer (Inno Setup script exists in `build/`, not yet validated end-to-end)
+- [x] Installer — per-user Inno Setup build (install/uninstall validated; code signing still pending)
 - [ ] Code signing via [SignPath Foundation](https://signpath.org/)
 - [ ] Grouping in the menu panel
 - [ ] First-run wizard (scan desktop → propose what to collect)
