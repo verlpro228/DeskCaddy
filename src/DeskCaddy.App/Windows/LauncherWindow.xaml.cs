@@ -32,6 +32,8 @@ public partial class LauncherWindow : Window
     /// <summary>新建分组对话框打开期间，不要因为失活/点外把面板收起来。</summary>
     private bool _dialogOpen;
 
+    private Button? _newGroupButton;
+
     private Point _pressPoint;
     private LauncherItem? _pressedItem;
     private LauncherItem? _selectedItem;
@@ -499,10 +501,11 @@ public partial class LauncherWindow : Window
         {
             Content = "＋",
             Style = (Style)FindResource("GroupChipButton"),
-            ToolTip = "新建分组"
+            ToolTip = "拖动图标到这里可新建分组并归入"
         };
 
         add.Click += (_, _) => CreateGroupPrompt();
+        _newGroupButton = add;
         GroupChips.Children.Add(add);
     }
 
@@ -535,10 +538,98 @@ public partial class LauncherWindow : Window
             chip.ContextMenu = menu;
         }
 
+        // 「全部」不是存放目标；未分组与具名分组都接受拖入。
+        if (filter is not null)
+        {
+            chip.ToolTip = filter.Length == 0
+                ? "把图标拖到这里移出分组"
+                : "把图标拖到这里";
+        }
+
         GroupChips.Children.Add(chip);
     }
 
-    private async void CreateGroupPrompt(LauncherItem? item = null)
+    /// <summary>
+    /// 命中分组标签：返回 (标签控件, 目标分组, 是否新建分组)。
+    /// Tag 为 null 的是「全部」（不可放）；空字符串是「未分组」。
+    /// 用窗口级 DragOver/Drop + 命中测试统一处理，避免依赖子控件的 AllowDrop
+    /// 在分层窗口/滚动容器里的命中差异。
+    /// </summary>
+    private (Control Chip, string? Group, bool IsNewGroup)? FindGroupDropTarget(Point position)
+    {
+        var hit = GroupChips.InputHitTest(position) as DependencyObject;
+
+        while (hit is not null && hit is not RadioButton && hit is not Button)
+        {
+            hit = VisualTreeHelper.GetParent(hit);
+        }
+
+        if (hit is RadioButton radio)
+        {
+            return radio.Tag is string group ? (radio, group, false) : null;
+        }
+
+        if (hit is Button button && ReferenceEquals(button, _newGroupButton))
+        {
+            return (button, null, true);
+        }
+
+        return null;
+    }
+
+    private static bool TryGetDraggedLibraryFile(IDataObject data, out string path)
+    {
+        path = string.Empty;
+
+        if (!data.GetDataPresent(DataFormats.FileDrop))
+        {
+            return false;
+        }
+
+        if (data.GetData(DataFormats.FileDrop) is not string[] files || files.Length != 1)
+        {
+            return false;
+        }
+
+        if (!files[0].StartsWith(LibraryPaths.CollectedDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        path = files[0];
+
+        return File.Exists(path) || Directory.Exists(path);
+    }
+
+    private void HighlightGroupDropTarget(Control target)
+    {
+        foreach (var child in GroupChips.Children)
+        {
+            if (child is not Control control)
+            {
+                continue;
+            }
+
+            var isTarget = ReferenceEquals(control, target);
+
+            control.Opacity = isTarget ? 1.0 : 0.55;
+            control.FontWeight = isTarget ? FontWeights.SemiBold : FontWeights.Normal;
+        }
+    }
+
+    private void ClearGroupDropHighlights()
+    {
+        foreach (var child in GroupChips.Children)
+        {
+            if (child is Control control)
+            {
+                control.Opacity = 1.0;
+                control.FontWeight = FontWeights.Normal;
+            }
+        }
+    }
+
+    private async void CreateGroupPrompt(string? assignFileName = null)
     {
         if (_dialogOpen)
         {
@@ -566,9 +657,9 @@ public partial class LauncherWindow : Window
                 var actual = service.Groups.FirstOrDefault(g =>
                     string.Equals(g, name, StringComparison.OrdinalIgnoreCase)) ?? name;
 
-                if (item is not null)
+                if (assignFileName is not null)
                 {
-                    service.SetGroup(Path.GetFileName(item.Path), actual);
+                    service.SetGroup(assignFileName, actual);
                 }
 
                 return (created, actual);
@@ -576,7 +667,7 @@ public partial class LauncherWindow : Window
 
             AppLog.Info(result.Message);
 
-            if (item is null)
+            if (assignFileName is null)
             {
                 _groupFilter = canonical;
             }
@@ -700,10 +791,8 @@ public partial class LauncherWindow : Window
         }
     }
 
-    private async void AssignGroup(LauncherItem item, string? group)
+    private async void AssignGroup(string fileName, string? group)
     {
-        var fileName = Path.GetFileName(item.Path);
-
         var result = await Task.Run(() =>
             CollectionService.CreateDefault().SetGroup(fileName, group));
 
@@ -715,9 +804,11 @@ public partial class LauncherWindow : Window
     {
         var root = new MenuItem { Header = "移动到分组" };
 
+        var fileName = Path.GetFileName(item.Path);
+
         foreach (var group in _groups)
         {
-            var entry = CreateMenuItem(group, () => AssignGroup(item, group));
+            var entry = CreateMenuItem(group, () => AssignGroup(fileName, group));
             entry.IsCheckable = true;
             entry.IsChecked = string.Equals(item.Group, group, StringComparison.OrdinalIgnoreCase);
             root.Items.Add(entry);
@@ -728,12 +819,12 @@ public partial class LauncherWindow : Window
             root.Items.Add(new Separator());
         }
 
-        var ungrouped = CreateMenuItem("未分组", () => AssignGroup(item, null));
+        var ungrouped = CreateMenuItem("未分组", () => AssignGroup(fileName, null));
         ungrouped.IsCheckable = true;
         ungrouped.IsChecked = item.Group.Length == 0;
         root.Items.Add(ungrouped);
         root.Items.Add(new Separator());
-        root.Items.Add(CreateMenuItem("新建分组…", () => CreateGroupPrompt(item)));
+        root.Items.Add(CreateMenuItem("新建分组…", () => CreateGroupPrompt(fileName)));
 
         return root;
     }
@@ -1047,6 +1138,11 @@ public partial class LauncherWindow : Window
         {
             AppLog.Error("launcher drag failed", ex);
         }
+        finally
+        {
+            ClearGroupDropHighlights();
+            HideDragGhost();
+        }
 
         _dragItem = null;
 
@@ -1066,9 +1162,34 @@ public partial class LauncherWindow : Window
         && files.Length == 1
         && files[0].StartsWith(LibraryPaths.CollectedDirectory, StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>拖动经过面板时实时交换位置，效果与 Windows 桌面一致。</summary>
+    /// <summary>拖动经过面板时：悬停在分组标签上优先作为分组目标，否则实时排序。</summary>
     private void OnPanelDragOver(object sender, DragEventArgs e)
     {
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            HideDragGhost();
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+        if (TryGetDraggedLibraryFile(e.Data, out _))
+        {
+            var target = FindGroupDropTarget(e.GetPosition(GroupChips));
+
+            if (target is { } drop)
+            {
+                e.Effects = DragDropEffects.Move;
+                e.Handled = true;
+
+                ShowDragGhost(e.GetPosition(DragGhostHost));
+                HighlightGroupDropTarget(drop.Chip);
+                return;
+            }
+        }
+
+        ClearGroupDropHighlights();
+
         // 有搜索词时不排序：可见的是筛选结果，与落库顺序对不上。
         if (!IsOwnDrag(e.Data) || _dragItem is null || _viewItems is null
             || SearchBox.Text.Trim().Length > 0)
@@ -1105,6 +1226,7 @@ public partial class LauncherWindow : Window
     private void OnPanelDragLeave(object sender, DragEventArgs e)
     {
         HideDragGhost();
+        ClearGroupDropHighlights();
     }
 
     private void PreviewReorder(Point position)
@@ -1152,6 +1274,53 @@ public partial class LauncherWindow : Window
 
     private void OnPanelDrop(object sender, DragEventArgs e)
     {
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            return;
+        }
+
+        if (TryGetDraggedLibraryFile(e.Data, out var droppedPath))
+        {
+            var target = FindGroupDropTarget(e.GetPosition(GroupChips));
+
+            if (target is { } drop)
+            {
+                e.Handled = true;
+                e.Effects = DragDropEffects.Move;
+
+                HideDragGhost();
+                ClearGroupDropHighlights();
+
+                // 面板自己发起的拖拽：只是改分组，不要走拖出/关闭流程。
+                if (_dragItem is not null)
+                {
+                    _droppedOnPanel = true;
+                }
+
+                var droppedName = Path.GetFileName(droppedPath);
+
+                AppLog.Info(drop.IsNewGroup
+                    ? $"group drop: (new) file={droppedName}"
+                    : $"group drop: {(drop.Group!.Length == 0 ? "(ungrouped)" : drop.Group)} file={droppedName}");
+
+                // 在 OLE 拖拽循环结束后再改状态/弹对话框，避免在 Drop 回调里重建视觉树。
+                if (drop.IsNewGroup)
+                {
+                    Dispatcher.BeginInvoke(
+                        () => CreateGroupPrompt(droppedName),
+                        DispatcherPriority.Background);
+                }
+                else
+                {
+                    Dispatcher.BeginInvoke(
+                        () => AssignGroup(droppedName, drop.Group),
+                        DispatcherPriority.Background);
+                }
+
+                return;
+            }
+        }
+
         if (!IsOwnDrag(e.Data) || _dragItem is null || _viewItems is null
             || SearchBox.Text.Trim().Length > 0)
         {
