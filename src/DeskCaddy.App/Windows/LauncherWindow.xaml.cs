@@ -34,6 +34,9 @@ public partial class LauncherWindow : Window
 
     private Button? _newGroupButton;
 
+    /// <summary>拖拽结束后延迟复位 _draggingOut，吞掉 OLE 松手产生的误点击。</summary>
+    private DispatcherTimer? _dragResetTimer;
+
     private Point _pressPoint;
     private LauncherItem? _pressedItem;
     private LauncherItem? _selectedItem;
@@ -84,6 +87,14 @@ public partial class LauncherWindow : Window
         // 否则复用窗口后的第一次点外会被白白吞掉。
         _launchedFromPanel = false;
         _groupFilter = null;
+
+        // 复用窗口时，上一轮拖拽的状态可能还留在字段里。若不重置，
+        // 点外关闭会被 _draggingOut 拦掉（表现为「又关不掉了」）。
+        _dragResetTimer?.Stop();
+        _dragResetTimer = null;
+        _draggingOut = false;
+        _droppedOnPanel = false;
+        _dialogOpen = false;
 
         // 先透明再显示，避免在旧位置/旧尺寸上闪一帧。
         Opacity = 0;
@@ -246,6 +257,11 @@ public partial class LauncherWindow : Window
     {
         StopOutsideClickWatcher();
 
+        _dragResetTimer?.Stop();
+        _dragResetTimer = null;
+        _draggingOut = false;
+        _droppedOnPanel = false;
+
         LibraryEvents.Changed -= OnLibraryChanged;
 
         // 真正关闭（退出程序 / Alt+F4）时才拆掉视觉树引用。
@@ -264,9 +280,35 @@ public partial class LauncherWindow : Window
         base.OnClosed(e);
     }
 
+    /// <summary>拖拽结束后延迟复位，吞掉 OLE 松手产生的误点击。</summary>
+    private void ScheduleDragStateReset()
+    {
+        _dragResetTimer?.Stop();
+        _dragResetTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(350)
+        };
+
+        _dragResetTimer.Tick += (_, _) =>
+        {
+            _dragResetTimer?.Stop();
+            _dragResetTimer = null;
+
+            _draggingOut = false;
+            _droppedOnPanel = false;
+        };
+
+        _dragResetTimer.Start();
+    }
+
     /// <summary>关闭动画结束后隐藏窗口，保留实例供下次复用。</summary>
     private void HideForReuse()
     {
+        _dragResetTimer?.Stop();
+        _dragResetTimer = null;
+        _draggingOut = false;
+        _droppedOnPanel = false;
+
         Hide();
         StopOutsideClickWatcher();
 
@@ -1118,6 +1160,9 @@ public partial class LauncherWindow : Window
             return;
         }
 
+        _dragResetTimer?.Stop();
+        _dragResetTimer = null;
+
         _draggingOut = true;
         _dragItem = item;
         _droppedOnPanel = false;
@@ -1148,8 +1193,10 @@ public partial class LauncherWindow : Window
 
         if (_droppedOnPanel)
         {
-            // 排序已完成并落库；抑制紧随其后的误点击，面板保持打开。
+            // 排序/分组已完成；短暂保留 _draggingOut 吞掉 OLE 松手产生的误点击，
+            // 随后必须复位，否则之后的点外/失活都会被它拦住。
             _draggingOut = true;
+            ScheduleDragStateReset();
             return;
         }
 
