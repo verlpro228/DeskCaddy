@@ -6,6 +6,7 @@
 
 **一条 macOS 风格的玻璃 Dock，把你的 Windows 桌面真正清理干净。**
 
+[![CI](https://github.com/verlpro228/DeskCaddy/actions/workflows/ci.yml/badge.svg)](https://github.com/verlpro228/DeskCaddy/actions/workflows/ci.yml)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/verlpro228/DeskCaddy)](https://github.com/verlpro228/DeskCaddy/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/verlpro228/DeskCaddy/total)](https://github.com/verlpro228/DeskCaddy/releases)
