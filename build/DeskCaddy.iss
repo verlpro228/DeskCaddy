@@ -7,10 +7,10 @@
 ; 4. 不打包单文件（自解压容易被杀软误判），整目录安装
 
 #define AppName        "DeskCaddy"
-#define AppVersion     "0.1.0"
+#define AppVersion     "1.0.2"
 #define AppPublisher   "DeskCaddy"
 #define AppExeName     "DeskCaddy.exe"
-#define AppUrl         "https://github.com/"
+#define AppUrl         "https://github.com/verlpro228/DeskCaddy"
 
 [Setup]
 ; 换项目时请重新生成这个 GUID，不要复用

@@ -56,15 +56,15 @@ DeskCaddy 会把你桌面上散落的快捷方式**真正移动**进一个托管
 
 ## 安装
 
-**直接下载最新版：** [**DeskCaddy 1.0.1**](https://github.com/verlpro228/DeskCaddy/releases/latest)
-→ `DeskCaddy-1.0.1-win-x64.zip`（58 MB）
+**直接下载最新版：** [**DeskCaddy 1.0.2**](https://github.com/verlpro228/DeskCaddy/releases/latest)
+→ `DeskCaddy-1.0.2-win-x64.zip`（58 MB）
 
 1. 下载 zip
 2. **校验文件**（可选，但推荐 —— 程序尚未做代码签名）：
 
    ```powershell
    # 计算你下载到的文件的哈希
-   Get-FileHash .\DeskCaddy-1.0.1-win-x64.zip -Algorithm SHA256
+   Get-FileHash .\DeskCaddy-1.0.2-win-x64.zip -Algorithm SHA256
 
    # 与随发布附带的校验值比对
    Get-Content .\SHA256SUMS.txt
@@ -164,7 +164,7 @@ dotnet run --project src\DeskCaddy.Cli -- selftest 100
 
 ## 路线图
 
-- [x] 便携版发布 —— [v1.0.1](https://github.com/verlpro228/DeskCaddy/releases/tag/v1.0.1)（自包含 zip + SHA-256）
+- [x] 便携版发布 —— [v1.0.2](https://github.com/verlpro228/DeskCaddy/releases/tag/v1.0.2)（自包含 zip + SHA-256）
 - [ ] 安装包（Inno Setup 脚本已在 `build/`，尚未端到端验证）
 - [ ] 通过 [SignPath Foundation](https://signpath.org/) 做代码签名
 - [ ] 菜单栏分组
