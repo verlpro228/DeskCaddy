@@ -490,8 +490,8 @@ public partial class LauncherWindow : Window
         GroupChips.Children.Clear();
 
         AddGroupChip("全部", null);
-        AddGroupChip("未分组", string.Empty);
 
+        // 「未分组」不再作为标签：只显示已有分组。移出分组仍可通过右键菜单完成。
         foreach (var group in _groups)
         {
             AddGroupChip(group, group);
