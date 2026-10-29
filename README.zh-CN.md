@@ -181,10 +181,12 @@ dotnet run --project src\DeskCaddy.Cli -- selftest 100
 
 ## 参与
 
-欢迎 Issue 与 Pull Request。提交补丁即表示你声明该补丁由你编写、或你有权以 GPL-3.0
-提交（DCO）：使用 `git commit -s` 加上 `Signed-off-by` 签名行。
+欢迎提交 Issue —— 问题反馈和功能建议都很有帮助。
 
-请保持「零第三方依赖」的现状——只依赖 .NET 基类库的修复和功能最容易被接受。
+**暂不接受外部 Pull Request**：本项目由作者单独维护，不合并他人提交的代码。
+如果你希望改动什么，请先开 Issue 讨论。
+
+项目保持「零第三方依赖」的设计原则。
 
 ## 许可证
 

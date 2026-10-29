@@ -191,12 +191,13 @@ The solution has three projects:
 
 ## Contributing
 
-Issues and pull requests are welcome. By submitting a patch you certify that you wrote it
-or have the right to submit it under GPL-3.0 (DCO): commit with `git commit -s` to add your
-`Signed-off-by` line.
+Issues are welcome — bug reports and feature suggestions are genuinely useful.
 
-Please keep the zero-third-party-dependency policy — bug fixes and features that only need
-the .NET base class library are the easiest to accept.
+**External pull requests are not accepted.** The project is maintained by a single author and
+does not merge code contributed by others. If you want something changed, please open an issue
+first so the approach can be discussed.
+
+The project keeps a zero-third-party-dependency policy.
 
 ## License
 
