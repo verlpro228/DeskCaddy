@@ -39,6 +39,7 @@ public partial class DockWindow : Window
     private HwndSource? _source;
     private LauncherWindow? _launcher;
     private SettingsWindow? _settingsWindow;
+    private IslandWindow? _island;
     private AppSettings _appSettings = SettingsStore.Default.Load();
     private TrayIcon? _tray;
     private DispatcherTimer? _desktopWatcher;
@@ -162,6 +163,8 @@ public partial class DockWindow : Window
 
         _appSettings = settings;
 
+        ApplyIsland(settings);
+
         Strip.IconSize = settings.IconSize;
         Strip.HoverScale = settings.HoverScale;
 
@@ -179,11 +182,40 @@ public partial class DockWindow : Window
         }
     }
 
+    /// <summary>
+    /// 按设置创建 / 销毁顶部灵动岛。岛自己监听系统媒体会话，
+    /// 有音乐时出现、没有时退场，Dock 这边只管生命周期。
+    /// </summary>
+    private void ApplyIsland(AppSettings settings)
+    {
+        if (!settings.IslandEnabled)
+        {
+            if (_island is not null)
+            {
+                _island.Close();
+                _island = null;
+            }
+
+            return;
+        }
+
+        if (_island is null)
+        {
+            _island = new IslandWindow();
+            _ = _island.StartAsync();
+        }
+
+        _island.ApplySettings(settings);
+    }
+
     private void OnClosed(object? sender, EventArgs e)
     {
         // 面板复用后被 Hide 起来，退出时要显式关掉，让它走完整的清理路径。
         _launcher?.Close();
         _launcher = null;
+
+        _island?.Close();
+        _island = null;
 
         _tray?.Dispose();
         _tray = null;
@@ -360,19 +392,25 @@ public partial class DockWindow : Window
 
             // 底图重截只在必要时发生：
             // ① 上次截屏被应用挡住，切回桌面后第一次见到壁纸
-            // ② 壁纸变了（换图 / 轮播 / 原图替换）
-            // ③ 动态壁纸源（Wallpaper Engine）：指纹不变，节流为 45 秒一次
-            // 其他情况一律不重截，避免每次切回桌面毛玻璃都闪一下。
+            // ② 壁纸变了（注册表 / 转码文件 / Wallpaper Engine 的 config.json）
+            // ③ 动态壁纸源：45 秒兜底一次（防止指纹没覆盖到的情况）
+            // 其余情况一律不重截 —— 每次重截都要把窗口透明 25ms，看起来就是闪一下。
             var isDynamicWallpaper = ScreenBackdrop.IsDynamicWallpaperSource();
             var dynamicDue = isDynamicWallpaper
                 && (DateTime.UtcNow - _lastBackdropCaptureUtc).TotalSeconds >= 45;
 
+            var wallpaperChanged = wallpaperMark != _lastWallpaperMark;
+
             var needsRefresh = (!_backdropIsDesktop && !_desktopWasForeground)
-                || wallpaperMark != _lastWallpaperMark
+                || wallpaperChanged
                 || dynamicDue;
 
             if (isDesktop && _backdropReady && needsRefresh)
             {
+                AppLog.Info(
+                    $"backdrop refresh: mark={wallpaperChanged} dynamic={dynamicDue} " +
+                    $"wasDesktop={_desktopWasForeground}");
+
                 RefreshBackdrop();
             }
 

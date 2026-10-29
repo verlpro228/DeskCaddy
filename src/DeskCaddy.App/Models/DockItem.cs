@@ -1,5 +1,4 @@
 using System.Windows.Media.Imaging;
-
 namespace DeskCaddy.Models;
 
 public enum DockItemKind

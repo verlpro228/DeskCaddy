@@ -2,7 +2,9 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- 带上 Windows SDK 版本才能拿到 WinRT 投影（灵动岛要读系统媒体会话 SMTC）。
+         net10.0-windows 不带版本，Windows.Media.Control 这些命名空间根本不存在。 -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
     <RootNamespace>DeskCaddy</RootNamespace>
     <AssemblyName>DeskCaddy</AssemblyName>

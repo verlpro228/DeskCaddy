@@ -70,7 +70,7 @@ if ($NoRun) {
 }
 
 # 3. 启动
-$binDir = Join-Path $repoRoot "src\DeskCaddy.App\bin\$Configuration\net10.0-windows"
+$binDir = Join-Path $repoRoot "src\DeskCaddy.App\bin\$Configuration\net10.0-windows10.0.19041.0"
 
 if ($Shadow) {
     # 复制一份再运行：bin 目录保持可写，之后可以边跑边编

@@ -24,6 +24,10 @@ public sealed class AppSettings
     public const double MinLauncherIconSize = 36;
     public const double MaxLauncherIconSize = 80;
 
+    public const double MinIslandWidth = 260;
+    public const double MaxIslandWidth = 560;
+    public const double DefaultIslandWidth = 380;
+
     public int Version { get; set; } = CurrentVersion;
 
     /// <summary>Dock 图标边长（DIP）。</summary>
@@ -47,6 +51,12 @@ public sealed class AppSettings
     /// </summary>
     public bool LauncherOpenOnDoubleClick { get; set; } = true;
 
+    /// <summary>顶部音乐灵动岛。默认关闭，功能还在打磨阶段。</summary>
+    public bool IslandEnabled { get; set; }
+
+    /// <summary>灵动岛展开后的宽度（DIP），收起时固定为 220。</summary>
+    public double IslandWidth { get; set; } = DefaultIslandWidth;
+
     public AppSettings Clamp()
     {
         IconSize = Math.Clamp(IconSize, MinIconSize, MaxIconSize);
@@ -54,6 +64,7 @@ public sealed class AppSettings
         LauncherColumns = Math.Clamp(LauncherColumns, MinLauncherColumns, MaxLauncherColumns);
         DockMaxItems = Math.Clamp(DockMaxItems, MinDockItems, MaxDockItemsLimit);
         LauncherIconSize = Math.Clamp(LauncherIconSize, MinLauncherIconSize, MaxLauncherIconSize);
+        IslandWidth = Math.Clamp(IslandWidth, MinIslandWidth, MaxIslandWidth);
 
         return this;
     }

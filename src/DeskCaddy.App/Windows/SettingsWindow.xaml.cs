@@ -26,6 +26,7 @@ public partial class SettingsWindow : Window
     private const string SectionAppearance = "appearance";
     private const string SectionDock = "dock";
     private const string SectionLauncher = "launcher";
+    private const string SectionIsland = "island";
     private const string SectionMaintenance = "maintenance";
     private const string SectionAbout = "about";
 
@@ -52,6 +53,7 @@ public partial class SettingsWindow : Window
         BuildAppearance();
         BuildDockIcons();
         BuildLauncher();
+        BuildIsland();
         BuildMaintenance();
         BuildAbout();
 
@@ -335,6 +337,46 @@ public partial class SettingsWindow : Window
         AddCard(host, SectionLauncher, "\uE80A", "每行列数",
             "菜单栏面板一行最多放几个图标（上限固定 10）",
             Horizontal(columnSlider, columnValue));
+    }
+
+    private void BuildIsland()
+    {
+        var host = AddSection(SectionIsland, "灵动岛", "\uE8D6");
+
+        var enabled = new CheckBox
+        {
+            Style = (Style)FindResource("Switch"),
+            IsChecked = _settings.IslandEnabled
+        };
+
+        enabled.Click += (_, _) =>
+        {
+            _settings.IslandEnabled = enabled.IsChecked == true;
+            Apply();
+        };
+
+        AddCard(host, SectionIsland, "\uE768", "音乐灵动岛",
+            "屏幕顶部悬浮的音乐播放条，只在系统里有音乐播放时出现",
+            enabled);
+
+        var widthValue = ValueLabel(_settings.IslandWidth);
+        var widthSlider = NumberSlider(
+            AppSettings.MinIslandWidth,
+            AppSettings.MaxIslandWidth,
+            _settings.IslandWidth);
+
+        widthSlider.TickFrequency = 20;
+
+        widthSlider.ValueChanged += (_, e) =>
+        {
+            _settings.IslandWidth = Math.Round(e.NewValue);
+            widthValue.Text = $"{_settings.IslandWidth:F0}";
+            Apply();
+        };
+
+        AddCard(host, SectionIsland, "\uE8A9", "宽度",
+            "鼠标悬停展开时的宽度（像素），收起状态固定为 220",
+            Horizontal(widthSlider, widthValue));
     }
 
     private void BuildMaintenance()

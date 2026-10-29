@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -43,8 +44,11 @@ internal static class ScreenBackdrop
     private static (double X, double Y, double W, double H, double Radius, string Wallpaper) _cachedKey;
 
     /// <summary>
-    /// 当前壁纸指纹：注册表里的壁纸路径 + 图片文件修改时间。
-    /// 壁纸一变（换图 / 轮播切换 / 原图替换）指纹就变，底图缓存随之失效。
+    /// 当前壁纸指纹：注册表里的壁纸路径 + 图片修改时间，再加系统转码壁纸的修改时间。
+    ///
+    /// 只用注册表路径不够：轮播 / Windows 聚焦 / 部分第三方壁纸工具会复用同一个
+    /// 文件（Wallpaper Engine 就是固定的 BackupWallpaper），路径和时间都不变。
+    /// TranscodedWallpaper 是 Windows 真正拿去绘制的转码副本，静态壁纸一换它必更新。
     /// </summary>
     public static string CurrentWallpaperMark()
     {
@@ -55,17 +59,127 @@ internal static class ScreenBackdrop
                 "Wallpaper",
                 null) as string ?? string.Empty;
 
+            var mark = path;
+
             if (path.Length > 0 && File.Exists(path))
             {
-                return path + "|" + File.GetLastWriteTimeUtc(path).Ticks;
+                mark += "|" + File.GetLastWriteTimeUtc(path).Ticks;
             }
 
-            return path;
+            mark += "|" + TranscodeMark();
+
+            // Wallpaper Engine 换壁纸既不更新注册表、也不更新转码文件，
+            // 但它会重写安装目录下的 config.json，用这个当信号最可靠。
+            mark += "|" + WallpaperEngineConfigMark();
+
+            return mark;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return string.Empty;
         }
+    }
+
+    private static string? _wallpaperEngineConfigPath;
+    private static DateTime _wallpaperEngineConfigCheckedUtc = DateTime.MinValue;
+
+    /// <summary>
+    /// Wallpaper Engine 的配置文件指纹。进程没在跑就返回 "-"，
+    /// 解析进程路径本身也有开销，最多 30 秒查找一次。
+    /// </summary>
+    private static string WallpaperEngineConfigMark()
+    {
+        var path = ResolveWallpaperEngineConfig();
+        if (path is null)
+        {
+            return "-";
+        }
+
+        var info = new FileInfo(path);
+
+        if (!info.Exists)
+        {
+            return "-";
+        }
+
+        return $"{info.LastWriteTimeUtc.Ticks}:{info.Length}";
+    }
+
+    private static string? ResolveWallpaperEngineConfig()
+    {
+        if (_wallpaperEngineConfigPath is not null && File.Exists(_wallpaperEngineConfigPath))
+        {
+            return _wallpaperEngineConfigPath;
+        }
+
+        if ((DateTime.UtcNow - _wallpaperEngineConfigCheckedUtc).TotalSeconds < 30)
+        {
+            return _wallpaperEngineConfigPath;
+        }
+
+        _wallpaperEngineConfigCheckedUtc = DateTime.UtcNow;
+
+        foreach (var processName in new[] { "wallpaper64", "wallpaper32" })
+        {
+            try
+            {
+                foreach (var process in Process.GetProcessesByName(processName))
+                {
+                    try
+                    {
+                        var executable = process.MainModule?.FileName;
+                        if (string.IsNullOrEmpty(executable))
+                        {
+                            continue;
+                        }
+
+                        var directory = Path.GetDirectoryName(executable);
+                        if (string.IsNullOrEmpty(directory))
+                        {
+                            continue;
+                        }
+
+                        var config = Path.Combine(directory, "config.json");
+
+                        if (File.Exists(config))
+                        {
+                            _wallpaperEngineConfigPath = config;
+                            return config;
+                        }
+                    }
+                    catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or UnauthorizedAccessException)
+                    {
+                        // 拿不到进程路径就算了，继续用转码文件指纹。
+                    }
+                    finally
+                    {
+                        process.Dispose();
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+            {
+            }
+        }
+
+        _wallpaperEngineConfigPath = null;
+        return null;
+    }
+
+    private static string TranscodeMark()
+    {
+        var transcoded = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            @"Microsoft\Windows\Themes\TranscodedWallpaper");
+
+        if (!File.Exists(transcoded))
+        {
+            return "-";
+        }
+
+        var info = new FileInfo(transcoded);
+
+        return $"{info.LastWriteTimeUtc.Ticks}:{info.Length}";
     }
 
     /// <summary>
