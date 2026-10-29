@@ -65,21 +65,21 @@ and reversible.
 
 ## Installation
 
-**Grab the latest release:** [**DeskCaddy 1.0.2**](https://github.com/verlpro228/DeskCaddy/releases/latest)
+**Grab the latest release:** [**DeskCaddy 1.1.0**](https://github.com/verlpro228/DeskCaddy/releases/latest)
 
 Two builds are published:
 
-- `DeskCaddy-1.0.2-setup.exe` — per-user installer, no admin prompt; uninstalling keeps your collected library
-- `DeskCaddy-1.0.2-win-x64.zip` — portable, extract and run
+- `DeskCaddy-1.1.0-setup.exe` — per-user installer, no admin prompt; uninstalling keeps your collected library
+- `DeskCaddy-1.1.0-win-x64.zip` — portable, extract and run
 
 1. Download either build
 2. **Verify it** (optional, but recommended — the binaries are not code-signed yet):
 
    ```powershell
    # hash of the file you downloaded
-   Get-FileHash .\DeskCaddy-1.0.2-setup.exe -Algorithm SHA256
+   Get-FileHash .\DeskCaddy-1.1.0-setup.exe -Algorithm SHA256
    # or the portable zip
-   Get-FileHash .\DeskCaddy-1.0.2-win-x64.zip -Algorithm SHA256
+   Get-FileHash .\DeskCaddy-1.1.0-win-x64.zip -Algorithm SHA256
 
    # the checksums published with the release
    Get-Content .\SHA256SUMS.txt
@@ -185,6 +185,7 @@ The solution has three projects:
 - [x] Installer — per-user Inno Setup build (install/uninstall validated; code signing still pending)
 - [ ] Code signing via [SignPath Foundation](https://signpath.org/)
 - [x] Grouping in the menu panel — filter chips + drag-into-group + right-click management
+- [x] Music island — top-of-screen player (hover to expand, hides when paused, adjustable width)
 - [ ] First-run wizard (scan desktop → propose what to collect)
 - [ ] Mixed-DPI multi-monitor positioning
 
