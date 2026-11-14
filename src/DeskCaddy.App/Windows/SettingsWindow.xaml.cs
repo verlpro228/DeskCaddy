@@ -10,6 +10,7 @@ using DeskCaddy.Core.Library;
 using DeskCaddy.Core.Settings;
 using DeskCaddy.Diagnostics;
 using DeskCaddy.Settings;
+using DeskCaddy.Updates;
 
 namespace DeskCaddy.Windows;
 
@@ -483,9 +484,56 @@ public partial class SettingsWindow : Window
         var version = typeof(SettingsWindow).Assembly.GetName().Version?.ToString(3) ?? "未知";
 
         AddCard(host, SectionAbout, "\uE7B8", "DeskCaddy", $"版本 {version}", null);
+
+        var updateStatus = new TextBlock
+        {
+            Text = "从 GitHub 检查是否有新版本",
+            Foreground = SecondaryText,
+            FontSize = 11.5,
+            Margin = new Thickness(0, 3, 0, 0),
+            TextWrapping = TextWrapping.Wrap
+        };
+
+        var updateButton = new Button
+        {
+            Content = "检查更新",
+            Style = (Style)FindResource("GhostButton")
+        };
+
+        updateButton.Click += async (_, _) => await CheckForUpdatesAsync(updateStatus, updateButton);
+
+        AddCard(host, SectionAbout, "\uE72C", "检查更新", updateStatus, updateButton);
+
         AddCard(host, SectionAbout, "\uE8F1", "收纳条目",
             $"{CountCollected()} 个快捷方式", null);
         AddCard(host, SectionAbout, "\uE838", "数据目录", LibraryPaths.Root, null);
+    }
+
+    private async Task CheckForUpdatesAsync(TextBlock status, Button button)
+    {
+        button.IsEnabled = false;
+        button.Content = "检查中…";
+        status.Text = "正在连接 GitHub…";
+
+        var result = await UpdateChecker.CheckAsync();
+
+        button.IsEnabled = true;
+        button.Content = "检查更新";
+        status.Text = result.Message;
+
+        if (result.HasUpdate && result.ReleaseUrl is not null)
+        {
+            var answer = MessageBox.Show(
+                $"发现新版本 {result.LatestVersion}，当前版本 {UpdateChecker.CurrentVersion}。\n\n是否打开下载页面？",
+                "DeskCaddy",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Information);
+
+            if (answer == MessageBoxResult.OK)
+            {
+                OpenUrl(result.ReleaseUrl);
+            }
+        }
     }
 
     // ---------- 构建辅助 ----------
@@ -531,7 +579,7 @@ public partial class SettingsWindow : Window
         string section,
         string glyph,
         string title,
-        string description,
+        object? description,
         UIElement? trailing,
         Action? onClick = null)
     {
@@ -566,16 +614,20 @@ public partial class SettingsWindow : Window
             FontWeight = FontWeights.Medium
         });
 
-        if (!string.IsNullOrWhiteSpace(description))
+        if (description is string text && !string.IsNullOrWhiteSpace(text))
         {
             texts.Children.Add(new TextBlock
             {
-                Text = description,
+                Text = text,
                 Foreground = SecondaryText,
                 FontSize = 11.5,
                 Margin = new Thickness(0, 3, 0, 0),
                 TextWrapping = TextWrapping.Wrap
             });
+        }
+        else if (description is UIElement element)
+        {
+            texts.Children.Add(element);
         }
 
         Grid.SetColumn(texts, 1);
@@ -595,7 +647,7 @@ public partial class SettingsWindow : Window
             Padding = new Thickness(14, 12, 14, 12),
             Margin = new Thickness(0, 0, 0, 8),
             Child = grid,
-            Tag = $"{title} {description}"
+            Tag = description is string tagText ? $"{title} {tagText}" : title
         };
 
         if (onClick is not null)
@@ -763,6 +815,18 @@ public partial class SettingsWindow : Window
         catch (Exception ex) when (ex is IOException or System.ComponentModel.Win32Exception)
         {
             AppLog.Error("打开目录失败", ex);
+        }
+    }
+
+    private static void OpenUrl(string url)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is IOException or System.ComponentModel.Win32Exception)
+        {
+            AppLog.Error("打开页面失败", ex);
         }
     }
 
