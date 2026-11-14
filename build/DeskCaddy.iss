@@ -9,7 +9,7 @@
 #define AppName        "DeskCaddy"
 ; publish.ps1 会通过 /DAppVersion=<csproj 版本> 覆盖；直接编译时用下面的兜底值
 #ifndef AppVersion
-#define AppVersion     "1.0.2"
+#define AppVersion     "1.1.1"
 #endif
 #define AppPublisher   "DeskCaddy"
 #define AppExeName     "DeskCaddy.exe"

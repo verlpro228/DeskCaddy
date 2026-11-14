@@ -58,21 +58,21 @@ DeskCaddy 会把你桌面上散落的快捷方式**真正移动**进一个托管
 
 ## 安装
 
-**直接下载最新版：** [**DeskCaddy 1.1.0**](https://github.com/verlpro228/DeskCaddy/releases/latest)
+**直接下载最新版：** [**DeskCaddy 1.1.1**](https://github.com/verlpro228/DeskCaddy/releases/latest)
 
 发布两种形态：
 
-- `DeskCaddy-1.1.0-setup.exe` —— 按用户安装，不弹 UAC；卸载时保留收纳库
-- `DeskCaddy-1.1.0-win-x64.zip` —— 便携版，解压即用
+- `DeskCaddy-1.1.1-setup.exe` —— 按用户安装，不弹 UAC；卸载时保留收纳库
+- `DeskCaddy-1.1.1-win-x64.zip` —— 便携版，解压即用
 
 1. 下载任意一种
 2. **校验文件**（可选，但推荐 —— 程序尚未做代码签名）：
 
    ```powershell
    # 计算你下载到的文件的哈希
-   Get-FileHash .\DeskCaddy-1.1.0-setup.exe -Algorithm SHA256
+   Get-FileHash .\DeskCaddy-1.1.1-setup.exe -Algorithm SHA256
    # 或者便携版 zip
-   Get-FileHash .\DeskCaddy-1.1.0-win-x64.zip -Algorithm SHA256
+   Get-FileHash .\DeskCaddy-1.1.1-win-x64.zip -Algorithm SHA256
 
    # 与随发布附带的校验值比对
    Get-Content .\SHA256SUMS.txt
