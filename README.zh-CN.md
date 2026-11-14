@@ -10,7 +10,7 @@
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/verlpro228/DeskCaddy)](https://github.com/verlpro228/DeskCaddy/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/verlpro228/DeskCaddy/total)](https://github.com/verlpro228/DeskCaddy/releases)
-[![Platform](https://img.shields.io/badge/platform-Windows%2011%2022H2%2B-0078D6)](#运行环境)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%202004%2B%20%7C%2011-0078D6)](#运行环境)
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com/)
 [![Third-party packages](https://img.shields.io/badge/dependencies-0-brightgreen)](THIRD-PARTY-NOTICES.md)
 
@@ -52,7 +52,8 @@ DeskCaddy 会把你桌面上散落的快捷方式**真正移动**进一个托管
 
 ## 运行环境
 
-- Windows 11 22H2（build 22621）或更高，x64
+- Windows 10 版本 2004（build 19041）或更高，x64
+- 主目标是 Windows 11 22H2+，每次发版只在 Win11 上实测；Win10 属尽力兼容
 - 不需要装其它东西 —— 发布的版本是**自包含**的（.NET 运行时已打包）
 
 ## 安装
@@ -146,7 +147,7 @@ cd src\DeskCaddy.Cli\bin\Release\net10.0-windows
 
 ## 从源码构建
 
-- Windows 11 22H2+
+- Windows 10 2004+ / Windows 11 22H2+
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 
 ```powershell

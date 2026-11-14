@@ -38,7 +38,9 @@ WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 LicenseFile=..\LICENSE
-MinVersion=10.0.22621
+; 主目标是 Windows 11；Win10 2004 (19041) 起做基础兼容（灵动岛依赖的
+; 系统媒体会话 SMTC 需要 1809+，而 TFM 锁定在 19041，取较高者）。
+MinVersion=10.0.19041
 
 ; 程序运行时会持有这个互斥体；安装/卸载前提示用户先关闭，避免文件被占用
 AppMutex=DeskCaddy.SingleInstance

@@ -10,7 +10,7 @@
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/verlpro228/DeskCaddy)](https://github.com/verlpro228/DeskCaddy/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/verlpro228/DeskCaddy/total)](https://github.com/verlpro228/DeskCaddy/releases)
-[![Platform](https://img.shields.io/badge/platform-Windows%2011%2022H2%2B-0078D6)](#requirements)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%202004%2B%20%7C%2011-0078D6)](#requirements)
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com/)
 [![Third-party packages](https://img.shields.io/badge/dependencies-0-brightgreen)](THIRD-PARTY-NOTICES.md)
 
@@ -60,7 +60,9 @@ and reversible.
 
 ## Requirements
 
-- Windows 11 22H2 (build 22621) or later, x64
+- Windows 10 version 2004 (build 19041) or later, x64
+- Windows 11 22H2+ is the primary target and the only configuration tested before each release;
+  Windows 10 compatibility is provided on a best-effort basis
 - Nothing else — the published release is **self-contained** (the .NET runtime is bundled)
 
 ## Installation
@@ -156,7 +158,7 @@ explicitly pass `--apply`.
 
 ## Building from source
 
-- Windows 11 22H2+
+- Windows 10 2004+ / Windows 11 22H2+
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 
 ```powershell
