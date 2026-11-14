@@ -13,7 +13,7 @@ namespace DeskCaddy.Rendering;
 /// </summary>
 public sealed class DockStripView : FrameworkElement
 {
-    private const double Gap = 8;
+    private double _gap = 8;
 
     /// <summary>
     /// 左右留白。必须 ≥ 悬停光晕的外扩量（图标 10% ≈ 5px）加余量，
@@ -27,6 +27,29 @@ public sealed class DockStripView : FrameworkElement
 
     private double _iconSize = 46;
     private double _hoverScale = 1.08;
+    private double _glassStrength = 100;
+
+    /// <summary>图标间距（DIP），由设置控制。</summary>
+    public double IconGap
+    {
+        get => _gap;
+        set
+        {
+            _gap = Math.Clamp(value, 2, 24);
+            InvalidateVisual();
+        }
+    }
+
+    /// <summary>玻璃底色强度（%）。100 为默认观感，越小越透。</summary>
+    public double GlassStrength
+    {
+        get => _glassStrength;
+        set
+        {
+            _glassStrength = Math.Clamp(value, 20, 140);
+            InvalidateVisual();
+        }
+    }
 
     /// <summary>Dock 图标边长（DIP），由设置控制。</summary>
     public double IconSize
@@ -95,7 +118,7 @@ public sealed class DockStripView : FrameworkElement
 
         return (PadX * 2)
             + (count * _iconSize)
-            + ((count - 1) * Gap)
+            + ((count - 1) * _gap)
             + (_iconSize * (_hoverScale - 1));
     }
 
@@ -230,12 +253,12 @@ public sealed class DockStripView : FrameworkElement
         // 2) 半透明着色层，压暗并统一色调
         var background = _backdrop is null
             ? new LinearGradientBrush(
-                Color.FromArgb(0xCC, 0x1A, 0x1A, 0x20),
-                Color.FromArgb(0xCC, 0x0E, 0x0E, 0x12),
+                Color.FromArgb(TintAlpha(0xCC), 0x1A, 0x1A, 0x20),
+                Color.FromArgb(TintAlpha(0xCC), 0x0E, 0x0E, 0x12),
                 90)
             : new LinearGradientBrush(
-                Color.FromArgb(0x14, 0x06, 0x06, 0x0A),
-                Color.FromArgb(0x2E, 0x06, 0x06, 0x0A),
+                Color.FromArgb(TintAlpha(0x14), 0x06, 0x06, 0x0A),
+                Color.FromArgb(TintAlpha(0x2E), 0x06, 0x06, 0x0A),
                 90);
 
         background.Freeze();
@@ -330,6 +353,10 @@ public sealed class DockStripView : FrameworkElement
 
         return -1;
     }
+
+    /// <summary>按「玻璃强度」缩放底色 alpha：100% 保持原值，低于 100 更通透。</summary>
+    private byte TintAlpha(byte alpha) =>
+        (byte)Math.Clamp(Math.Round(alpha * (_glassStrength / 100.0)), 0, 255);
 
     /// <summary>悬停高光：单层白色圆角，透明度随放大幅度渐入渐出。</summary>
     private void DrawHoverHalo(DrawingContext dc, Rect rect, double t)
@@ -438,13 +465,13 @@ public sealed class DockStripView : FrameworkElement
             return rects;
         }
 
-        var unit = _iconSize + Gap;
+        var unit = _iconSize + _gap;
         var influenceRadius = InfluenceFactor * unit;
 
         // 「更多」入口是固定锚点：不放大、不随右侧图标晃动（用户明确要求）。
         var hasMenu = _display[0].Kind == DockItemKind.Menu;
         var firstApp = hasMenu ? 1 : 0;
-        var appsStart = PadX + (hasMenu ? _iconSize + Gap : 0);
+        var appsStart = PadX + (hasMenu ? _iconSize + _gap : 0);
 
         var scales = new double[count];
         for (var i = firstApp; i < count; i++)
@@ -466,7 +493,7 @@ public sealed class DockStripView : FrameworkElement
 
         // 应用图标在「菜单按钮右侧的剩余空间」内居中
         var appsCount = count - firstApp;
-        var total = Gap * Math.Max(0, appsCount - 1);
+        var total = _gap * Math.Max(0, appsCount - 1);
         for (var i = firstApp; i < count; i++)
         {
             total += _iconSize * scales[i];
@@ -487,7 +514,7 @@ public sealed class DockStripView : FrameworkElement
             // 垂直居中。放大时向上下均匀溢出，容器高度已预留了放大余量，
             // 所以不会被裁掉。
             rects[i] = new Rect(x, (ActualHeight - size) / 2, size, size);
-            x += size + Gap;
+            x += size + _gap;
         }
 
         return rects;

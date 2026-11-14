@@ -43,6 +43,11 @@ public partial class DockWindow : Window
     private AppSettings _appSettings = SettingsStore.Default.Load();
     private TrayIcon? _tray;
     private DispatcherTimer? _desktopWatcher;
+
+    /// <summary>模糊强度滑块变化时用于防抖重截底图。</summary>
+    private DispatcherTimer? _backdropRefreshTimer;
+
+    private double _lastBlurStrength = 100;
     private bool _desktopWasForeground;
     private bool _backdropReady;
     private bool _backdropIsDesktop;
@@ -60,6 +65,9 @@ public partial class DockWindow : Window
         // 以启动时读到的值为基准，启动过程本身不算「数量变化」，
         // 避免 OnLoaded 里再触发一次多余的重载。
         _lastDockMaxItems = _appSettings.DockMaxItems;
+
+        // 同上：模糊强度以启动时的值为基准，避免启动阶段多截一次底图。
+        _lastBlurStrength = _appSettings.BlurStrength;
 
         SourceInitialized += OnSourceInitialized;
         Loaded += OnLoaded;
@@ -167,6 +175,19 @@ public partial class DockWindow : Window
 
         Strip.IconSize = settings.IconSize;
         Strip.HoverScale = settings.HoverScale;
+        Strip.IconGap = settings.DockIconGap;
+        Strip.GlassStrength = settings.GlassStrength;
+
+        // 菜单栏面板如果正开着，同步外观（圆角/玻璃/模糊），不用等下次打开。
+        _launcher?.ApplyAppearance(settings);
+
+        // 模糊半径变了要重截底图；滑块连续拖动时只认最后一次，
+        // 否则每一格都会触发一次「透明 → 截屏 → 恢复」，闪得看不下去。
+        if (Math.Abs(settings.BlurStrength - _lastBlurStrength) > 0.5)
+        {
+            _lastBlurStrength = settings.BlurStrength;
+            ScheduleBackdropRefresh();
+        }
 
         if (reloadNeeded)
         {
@@ -345,6 +366,27 @@ public partial class DockWindow : Window
 
     // ---------- 毛玻璃底图 ----------
 
+    /// <summary>模糊强度连续变化时防抖：停止拖动约 350ms 后只重截一次。</summary>
+    private void ScheduleBackdropRefresh()
+    {
+        if (_backdropRefreshTimer is null)
+        {
+            _backdropRefreshTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(350)
+            };
+
+            _backdropRefreshTimer.Tick += (_, _) =>
+            {
+                _backdropRefreshTimer!.Stop();
+                RefreshBackdrop();
+            };
+        }
+
+        _backdropRefreshTimer.Stop();
+        _backdropRefreshTimer.Start();
+    }
+
     private async void RefreshBackdrop()
     {
         try
@@ -356,7 +398,8 @@ public partial class DockWindow : Window
             await Task.Delay(25);
             DwmFlush();
 
-            var backdrop = ScreenBackdrop.Capture(this);
+            var blur = ScreenBackdrop.DockBlurRadius * (_appSettings.BlurStrength / 100.0);
+            var backdrop = ScreenBackdrop.Capture(this, blur);
             Strip.SetBackdrop(backdrop);
 
             AppLog.Info(backdrop is null

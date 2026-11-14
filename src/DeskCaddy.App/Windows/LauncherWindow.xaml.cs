@@ -54,6 +54,9 @@ public partial class LauncherWindow : Window
     private double _labelWidth = 106;
     private bool _openOnDoubleClick = true;
 
+    /// <summary>模糊强度倍率，来自设置；1.0 为默认半径。</summary>
+    private double _blurScale = 1.0;
+
     public LauncherWindow()
     {
         InitializeComponent();
@@ -352,6 +355,26 @@ public partial class LauncherWindow : Window
         _cellWidth = _iconSize + 64;
         _cellHeight = _iconSize + 72;
         _labelWidth = _cellWidth - 12;
+        _blurScale = settings.BlurStrength / 100.0;
+
+        // 圆角与玻璃强度是三处共用的观感参数：面板在打开时读取，
+        // 改完设置下次打开即生效（不需要重建窗口）。
+        var radius = Math.Clamp(
+            settings.CornerRadius,
+            AppSettings.MinCornerRadius,
+            AppSettings.MaxCornerRadius);
+
+        RootClip.RadiusX = radius;
+        RootClip.RadiusY = radius;
+        EdgeLayer.RadiusX = radius;
+        EdgeLayer.RadiusY = radius;
+
+        var tint = (byte)Math.Clamp(
+            Math.Round(0x4D * (settings.GlassStrength / 100.0)),
+            0,
+            255);
+
+        TintLayer.Fill = new SolidColorBrush(Color.FromArgb(tint, 0, 0, 0));
 
         var columns = Math.Clamp(
             settings.LauncherColumns,
@@ -361,6 +384,24 @@ public partial class LauncherWindow : Window
         // +2 是每个单元的左右 Margin
         Width = (columns * (_cellWidth + 2)) + 48;
         Height = 520;
+    }
+
+    /// <summary>
+    /// 设置页改动外观时立即套用，不必等下次打开面板。
+    /// 面板隐藏时调用也安全：下次打开会重新走一遍同样流程。
+    /// </summary>
+    public void ApplyAppearance(AppSettings settings)
+    {
+        var previousBlur = _blurScale;
+
+        ApplyLayout(settings);
+        UpdateClip();
+
+        // 模糊半径变了才重截，避免每拖一格滑块都截一次屏。
+        if (IsVisible && Math.Abs(previousBlur - _blurScale) > 0.005)
+        {
+            _ = RefreshBackdropAsync();
+        }
     }
 
     /// <summary>
@@ -948,7 +989,10 @@ public partial class LauncherWindow : Window
             // 面板显示「面板正后方区域」的模糊（区域截取，内存占用最小）。
             // 动态壁纸源（Wallpaper Engine）指纹不变，每次打开强制重截。
             var forceRefresh = ScreenBackdrop.IsDynamicWallpaperSource();
-            var backdrop = ScreenBackdrop.CaptureCached(this, ScreenBackdrop.PanelBlurRadius, forceRefresh);
+            var backdrop = ScreenBackdrop.CaptureCached(
+                this,
+                ScreenBackdrop.PanelBlurRadius * _blurScale,
+                forceRefresh);
             Backdrop.Source = backdrop;
         }
         catch (Exception ex)

@@ -28,7 +28,33 @@ public sealed class AppSettings
     public const double MaxIslandWidth = 560;
     public const double DefaultIslandWidth = 380;
 
+    /// <summary>玻璃底色强度：以 100% 为当前默认观感，低于 100 更透，高于 100 更实。</summary>
+    public const double MinGlassStrength = 20;
+    public const double MaxGlassStrength = 140;
+
+    /// <summary>毛玻璃模糊强度：100% 为默认半径，0 表示不模糊。</summary>
+    public const double MinBlurStrength = 0;
+    public const double MaxBlurStrength = 200;
+
+    public const double MinCornerRadius = 0;
+    public const double MaxCornerRadius = 40;
+
+    public const double MinDockIconGap = 2;
+    public const double MaxDockIconGap = 24;
+
     public int Version { get; set; } = CurrentVersion;
+
+    /// <summary>玻璃底色强度（%）。Dock、菜单栏、灵动岛共用，100 为默认观感。</summary>
+    public double GlassStrength { get; set; } = 100;
+
+    /// <summary>毛玻璃模糊强度（%）。只影响截屏模糊半径，不改变透明度。</summary>
+    public double BlurStrength { get; set; } = 100;
+
+    /// <summary>菜单栏与灵动岛的圆角半径（DIP）。Dock 始终是胶囊形。</summary>
+    public double CornerRadius { get; set; } = 26;
+
+    /// <summary>Dock 图标之间的间距（DIP）。</summary>
+    public double DockIconGap { get; set; } = 8;
 
     /// <summary>Dock 图标边长（DIP）。</summary>
     public double IconSize { get; set; } = 46;
@@ -65,6 +91,10 @@ public sealed class AppSettings
         DockMaxItems = Math.Clamp(DockMaxItems, MinDockItems, MaxDockItemsLimit);
         LauncherIconSize = Math.Clamp(LauncherIconSize, MinLauncherIconSize, MaxLauncherIconSize);
         IslandWidth = Math.Clamp(IslandWidth, MinIslandWidth, MaxIslandWidth);
+        GlassStrength = Math.Clamp(GlassStrength, MinGlassStrength, MaxGlassStrength);
+        BlurStrength = Math.Clamp(BlurStrength, MinBlurStrength, MaxBlurStrength);
+        CornerRadius = Math.Clamp(CornerRadius, MinCornerRadius, MaxCornerRadius);
+        DockIconGap = Math.Clamp(DockIconGap, MinDockIconGap, MaxDockIconGap);
 
         return this;
     }

@@ -147,8 +147,8 @@
         </Grid.Clip>
 
         <Image x:Name="Backdrop" Stretch="Fill" IsHitTestVisible="False" />
-        <Rectangle Fill="#4D000000" IsHitTestVisible="False" />
-        <Rectangle Stroke="#33FFFFFF" StrokeThickness="1" RadiusX="26" RadiusY="26" Margin="0.5" IsHitTestVisible="False" />
+        <Rectangle x:Name="TintLayer" Fill="#4D000000" IsHitTestVisible="False" />
+        <Rectangle x:Name="EdgeLayer" Stroke="#33FFFFFF" StrokeThickness="1" RadiusX="26" RadiusY="26" Margin="0.5" IsHitTestVisible="False" />
 
         <Grid Margin="28,18,26,18">
             <Grid.RowDefinitions>

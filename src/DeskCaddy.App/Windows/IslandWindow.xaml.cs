@@ -26,6 +26,12 @@ public partial class IslandWindow : Window
     private const double CollapsedWidth = 220;
     private const double ProgressInset = 40;
 
+    /// <summary>模糊强度倍率，来自设置；1.0 为默认半径。</summary>
+    private double _blurScale = 1.0;
+
+    /// <summary>上一次应用的倍率，用于判断是否需要重截底图。</summary>
+    private double _lastAppliedBlurScale = 1.0;
+
     private static readonly Brush FallbackCover = CreateFrozenBrush(
         new SolidColorBrush(Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF)));
 
@@ -102,6 +108,8 @@ public partial class IslandWindow : Window
         var windowWidth = Math.Max(CollapsedWidth, _expandedWidth);
         var widthChanged = Math.Abs(Width - windowWidth) > 0.5;
 
+        ApplyGlass(settings);
+
         Width = windowWidth;
 
         if (_expanded)
@@ -122,6 +130,52 @@ public partial class IslandWindow : Window
                 ScheduleGlassRefresh();
             }
         }
+    }
+
+    /// <summary>
+    /// 玻璃强度、圆角与模糊倍率：与 Dock、菜单栏共用同一套外观设置。
+    /// 只缩放原有配色的 alpha，100% 时与之前的观感完全一致。
+    /// </summary>
+    private void ApplyGlass(AppSettings settings)
+    {
+        var strength = Math.Clamp(settings.GlassStrength / 100.0, 0.2, 1.4);
+
+        byte Scale(byte alpha) =>
+            (byte)Math.Clamp(Math.Round(alpha * strength), 0, 255);
+
+        var radius = Math.Clamp(
+            settings.CornerRadius,
+            AppSettings.MinCornerRadius,
+            AppSettings.MaxCornerRadius);
+
+        Pill.CornerRadius = new CornerRadius(radius);
+        Tint.CornerRadius = new CornerRadius(Math.Max(0, radius - 1));
+
+        Pill.Background = Gradient(
+            Color.FromArgb(Scale(0xCC), 0x1A, 0x1A, 0x20),
+            Color.FromArgb(Scale(0xCC), 0x0E, 0x0E, 0x12));
+
+        Tint.Background = Gradient(
+            Color.FromArgb(Scale(0x14), 0x06, 0x06, 0x0A),
+            Color.FromArgb(Scale(0x2E), 0x06, 0x06, 0x0A));
+
+        _blurScale = settings.BlurStrength / 100.0;
+
+        // 模糊半径变了要重截一次底图；岛的窗口很小，代价可以忽略。
+        var blurChanged = Math.Abs(_blurScale - _lastAppliedBlurScale) > 0.005;
+        _lastAppliedBlurScale = _blurScale;
+
+        if (blurChanged && IsVisible)
+        {
+            ScheduleGlassRefresh();
+        }
+    }
+
+    private static LinearGradientBrush Gradient(Color top, Color bottom)
+    {
+        var brush = new LinearGradientBrush(top, bottom, 90);
+        brush.Freeze();
+        return brush;
     }
 
     protected override void OnClosed(EventArgs e)
@@ -595,9 +649,10 @@ public partial class IslandWindow : Window
             var force = _glassForce;
             _glassForce = false;
 
+            var blur = ScreenBackdrop.DockBlurRadius * _blurScale;
             var backdrop = force
-                ? ScreenBackdrop.Capture(this, ScreenBackdrop.DockBlurRadius)
-                : ScreenBackdrop.CaptureCached(this, ScreenBackdrop.DockBlurRadius);
+                ? ScreenBackdrop.Capture(this, blur)
+                : ScreenBackdrop.CaptureCached(this, blur);
 
             if (backdrop is null)
             {

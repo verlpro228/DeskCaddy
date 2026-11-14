@@ -185,6 +185,86 @@ public partial class SettingsWindow : Window
         AddCard(host, SectionAppearance, "\uE71D", "Dock 显示数量",
             "桌面上这条 Dock 最多显示几个图标，宽度会随数量自动调整",
             Horizontal(countSlider, countValue));
+
+        // 玻璃强度：三处共用的底色深浅
+        var glassValue = ValueLabel(_settings.GlassStrength);
+        glassValue.Text = $"{_settings.GlassStrength:F0}%";
+
+        var glassSlider = NumberSlider(
+            AppSettings.MinGlassStrength,
+            AppSettings.MaxGlassStrength,
+            _settings.GlassStrength);
+
+        glassSlider.TickFrequency = 5;
+
+        glassSlider.ValueChanged += (_, e) =>
+        {
+            _settings.GlassStrength = Math.Round(e.NewValue);
+            glassValue.Text = $"{_settings.GlassStrength:F0}%";
+            Apply();
+        };
+
+        AddCard(host, SectionAppearance, "\uE790", "玻璃强度",
+            "Dock、菜单栏、灵动岛共用的底色深浅；100% 为默认，越低越透",
+            Horizontal(glassSlider, glassValue));
+
+        // 模糊强度
+        var blurValue = ValueLabel(_settings.BlurStrength);
+        blurValue.Text = $"{_settings.BlurStrength:F0}%";
+
+        var blurSlider = NumberSlider(
+            AppSettings.MinBlurStrength,
+            AppSettings.MaxBlurStrength,
+            _settings.BlurStrength);
+
+        blurSlider.TickFrequency = 10;
+
+        blurSlider.ValueChanged += (_, e) =>
+        {
+            _settings.BlurStrength = Math.Round(e.NewValue);
+            blurValue.Text = $"{_settings.BlurStrength:F0}%";
+            Apply();
+        };
+
+        AddCard(host, SectionAppearance, "\uE8A3", "模糊强度",
+            "毛玻璃的模糊程度；0% 为完全清晰，越高越糊",
+            Horizontal(blurSlider, blurValue));
+
+        // 圆角
+        var radiusValue = ValueLabel(_settings.CornerRadius);
+        var radiusSlider = NumberSlider(
+            AppSettings.MinCornerRadius,
+            AppSettings.MaxCornerRadius,
+            _settings.CornerRadius);
+
+        radiusSlider.ValueChanged += (_, e) =>
+        {
+            _settings.CornerRadius = Math.Round(e.NewValue);
+            radiusValue.Text = $"{_settings.CornerRadius:F0}";
+            Apply();
+        };
+
+        AddCard(host, SectionAppearance, "\uE7FB", "圆角半径",
+            "菜单栏面板与灵动岛的圆角；Dock 始终保持胶囊形",
+            Horizontal(radiusSlider, radiusValue));
+
+        // Dock 图标间距
+        var gapValue = ValueLabel(_settings.DockIconGap);
+        var gapSlider = NumberSlider(
+            AppSettings.MinDockIconGap,
+            AppSettings.MaxDockIconGap,
+            _settings.DockIconGap);
+
+        gapSlider.ValueChanged += (_, e) =>
+        {
+            _settings.DockIconGap = Math.Round(e.NewValue);
+            gapValue.Text = $"{_settings.DockIconGap:F0}";
+            Apply();
+        };
+
+        AddCard(host, SectionAppearance, "\uE8A9", "Dock 图标间距",
+            "Dock 上相邻图标之间的水平距离，Dock 宽度会自动跟着变化",
+            Horizontal(gapSlider, gapValue));
     }
 
     private void BuildDockIcons()
